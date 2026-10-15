@@ -14,6 +14,8 @@ export class BootScene extends Phaser.Scene {
     this.makeGrassTextures();
     this.makePoopTextures();
     this.makeTargetTexture();
+    this.makeFoxTexture();
+    this.makeStarTexture();
     this.scene.start('Title');
   }
 
@@ -93,6 +95,47 @@ export class BootScene extends Phaser.Scene {
     rings.forEach((color, i) => g.fillStyle(color).fillCircle(24, 24, 22 - i * 4.5));
     g.lineStyle(2, 0x1b1f2a, 0.6).strokeCircle(24, 24, 22);
     g.generateTexture('target', 48, 84);
+    g.destroy();
+  }
+
+  /** A 76×46 side-view fox facing right. */
+  private makeFoxTexture(): void {
+    const g = this.make.graphics({}, false);
+    const orange = 0xe8742a;
+    const dark = 0xb4541c;
+    const leg = 0x3a2a20;
+
+    // Legs (back pair darker), then tail, body, chest.
+    g.fillStyle(leg).fillRect(22, 32, 5, 14).fillRect(46, 32, 5, 14);
+    g.fillStyle(0x2a1d16).fillRect(29, 32, 5, 13).fillRect(53, 32, 5, 13);
+    g.fillStyle(dark).fillEllipse(13, 22, 28, 13);
+    g.fillStyle(0xffffff).fillCircle(3, 20, 5);
+    g.fillStyle(orange).fillEllipse(37, 26, 42, 20);
+    g.fillStyle(0xfff4e6).fillEllipse(53, 30, 13, 12);
+    // Head, ears, snout.
+    g.fillStyle(orange).fillCircle(60, 19, 10);
+    g.fillStyle(dark).fillTriangle(52, 13, 58, 11, 53, 1).fillTriangle(60, 11, 66, 13, 64, 1);
+    g.fillStyle(0x2a1d16).fillTriangle(54, 11, 57, 10, 54, 5).fillTriangle(61, 10, 64, 11, 63, 5);
+    g.fillStyle(orange).fillTriangle(64, 15, 64, 25, 75, 22);
+    g.fillStyle(0xfff4e6).fillTriangle(62, 22, 66, 26, 75, 22);
+    g.fillStyle(0x1b1f2a).fillCircle(74, 21, 2).fillCircle(63, 17, 2);
+    g.fillStyle(0xffffff).fillCircle(63.6, 16.4, 0.7);
+
+    g.generateTexture('fox', 76, 46);
+    g.destroy();
+  }
+
+  /** Little dizzy star for stunned predators. */
+  private makeStarTexture(): void {
+    const g = this.make.graphics({}, false);
+    const points: Phaser.Math.Vector2[] = [];
+    for (let i = 0; i < 10; i++) {
+      const r = i % 2 === 0 ? 7 : 3;
+      const a = -Math.PI / 2 + (i * Math.PI) / 5;
+      points.push(new Phaser.Math.Vector2(8 + r * Math.cos(a), 8 + r * Math.sin(a)));
+    }
+    g.fillStyle(0xffe066).fillPoints(points, true);
+    g.generateTexture('star', 16, 16);
     g.destroy();
   }
 }

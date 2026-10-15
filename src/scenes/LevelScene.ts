@@ -1,8 +1,10 @@
 import Phaser from 'phaser';
 import { GAME_HEIGHT, GAME_WIDTH, TUNE } from '../config';
 import { GREYBOX_LEVEL, type Rect } from '../data/greyboxLevel';
+import { PREDATORS } from '../data/predators';
 import { GrassPatch } from '../entities/GrassPatch';
 import { PoopPellets } from '../entities/PoopPellets';
+import { Predator } from '../entities/Predator';
 import { PracticeTarget } from '../entities/PracticeTarget';
 import { Rabbit, type RabbitEvents } from '../entities/Rabbit';
 import { TUNING } from '../entities/tuning';
@@ -30,6 +32,7 @@ export class LevelScene extends Phaser.Scene {
   rabbit!: Rabbit;
   private grass: GrassPatch[] = [];
   private pellets!: PoopPellets;
+  private predators: Predator[] = [];
   private grassBits!: Phaser.GameObjects.Particles.ParticleEmitter;
   private poopBits!: Phaser.GameObjects.Particles.ParticleEmitter;
   private eatHint!: Phaser.GameObjects.Text;
@@ -89,6 +92,24 @@ export class LevelScene extends Phaser.Scene {
       });
     }
 
+    this.predators = level.predators.map(
+      (d) => new Predator(this, PREDATORS[d.kind], d.x, d.y, d.territory),
+    );
+    for (const pred of this.predators) {
+      this.physics.add.collider(pred.hitbox, solids);
+      this.physics.add.overlap(pred.hitbox, this.pellets.group, (_h, p) => {
+        const pellet = p as Phaser.Physics.Arcade.Image;
+        if (!this.pellets.isFlying(pellet)) return;
+        this.poopBits.explode(12, pellet.x, pellet.y);
+        const originX = pellet.getData('originX') as number;
+        this.pellets.kill(pellet);
+        if (pred.stun(originX)) {
+          this.floatText(pred.hitbox.x, pred.body.top - 50, 'BONK! 💫', '#ffe066', 26);
+          input.rumble(80, 0.4, 0.3);
+        }
+      });
+    }
+
     this.grassBits = this.add.particles(0, 0, 'grass-bit', {
       speed: { min: 80, max: 180 },
       angle: { min: 220, max: 320 },
@@ -136,9 +157,37 @@ export class LevelScene extends Phaser.Scene {
     const events = this.rabbit.update(dt, underfoot);
     this.handleRabbitEvents(events);
     this.pellets.update(dt);
+    this.updatePredators(dt);
     this.updateEatHint(underfoot);
 
     if (this.rabbit.body.top > GREYBOX_LEVEL.height + 100) this.fellInPit();
+  }
+
+  private updatePredators(dt: number): void {
+    const r = this.rabbit;
+    const snapshot = r.snapshot();
+    for (const pred of this.predators) {
+      const touching = !r.invulnerable && this.physics.overlap(r.hitbox, pred.hitbox);
+      pred.update(dt, snapshot, GREYBOX_LEVEL.solids, touching);
+      if (pred.justAlerted) {
+        pred.justAlerted = false;
+        input.rumble(140, 0.5, 0.5); // "you've been spotted"
+      }
+      if (touching && pred.state === 'chase') {
+        this.caught(pred);
+        return;
+      }
+    }
+  }
+
+  private caught(by: Predator): void {
+    const { x, y } = GREYBOX_LEVEL.spawn;
+    this.floatText(by.hitbox.x, by.body.top - 60, `Caught by the ${by.cfg.name.toLowerCase()}!`, '#ff8a80', 28);
+    this.cameras.main.shake(250, 0.01);
+    this.cameras.main.flash(300, 255, 120, 120);
+    input.rumble(300, 1, 0.8);
+    for (const pred of this.predators) pred.brain.calmDown();
+    this.rabbit.respawn(x, y, 2);
   }
 
   private grassUnderfoot(): GrassPatch | null {
@@ -184,7 +233,7 @@ export class LevelScene extends Phaser.Scene {
 
   private fellInPit(): void {
     const { x, y } = GREYBOX_LEVEL.spawn;
-    this.rabbit.respawn(x, y);
+    this.rabbit.respawn(x, y, 1);
     this.cameras.main.flash(250, 255, 255, 255);
     input.rumble(150, 0.6, 0.3);
   }

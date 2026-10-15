@@ -26,10 +26,11 @@ export class PoopPellets {
     const body = pellet.body as Phaser.Physics.Arcade.Body;
     body.enable = true;
     body.reset(x, y);
-    body.setCircle(5, 1, 1);
+    body.setCircle(7, -1, -1); // a little bigger than it looks: near-misses count
     body.setVelocity(vx, vy);
     body.setBounce(POOP_TUNING.pelletBounce, POOP_TUNING.pelletBounce);
-    pellet.setData({ flying: true, landedFor: 0 });
+    // originX: where it was fired from, so a hit predator knows where to look.
+    pellet.setData({ flying: true, landedFor: 0, originX: x });
   }
 
   isFlying(pellet: Phaser.GameObjects.GameObject): boolean {

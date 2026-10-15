@@ -1,4 +1,5 @@
 import Phaser from 'phaser';
+import type { RabbitSnapshot } from '../ai/perception';
 import { input } from '../input/InputManager';
 import { PoopAmmo } from '../systems/PoopAmmo';
 import { poopLaunchVelocity, type PoopAim } from './poopLaunch';
@@ -40,6 +41,8 @@ export class Rabbit {
   eating = false;
   /** While > 0, jump-through platforms are ignored (dropping down through one). */
   dropThroughTimer = 0;
+  /** While > 0, predators can't catch you (just respawned). The rabbit blinks. */
+  invulnerableTimer = 0;
 
   /** Last time (ms) we touched a jump-through platform, set by the level's collider. */
   private oneWayContactAt = -Infinity;
@@ -67,6 +70,24 @@ export class Rabbit {
     return this.hitbox.body as Phaser.Physics.Arcade.Body;
   }
 
+  get invulnerable(): boolean {
+    return this.invulnerableTimer > 0;
+  }
+
+  /** What predators can see and hear of the rabbit. */
+  snapshot(): RabbitSnapshot {
+    const b = this.body;
+    return {
+      x: this.hitbox.x,
+      centerY: b.center.y,
+      topY: b.top,
+      feetY: b.bottom,
+      vx: b.velocity.x,
+      onGround: this.onGround,
+      eating: this.eating,
+    };
+  }
+
   /** Called by the one-way platform collider. */
   touchedOneWay(): void {
     this.oneWayContactAt = this.scene.time.now;
@@ -86,6 +107,7 @@ export class Rabbit {
       jumpPressed = false;
     }
     this.dropThroughTimer = Math.max(0, this.dropThroughTimer - dt);
+    this.invulnerableTimer = Math.max(0, this.invulnerableTimer - dt);
 
     this.updateEating(dt, grass, jumpPressed, events);
     this.updateShooting(dt, events);
@@ -117,8 +139,9 @@ export class Rabbit {
     return events;
   }
 
-  respawn(x: number, y: number): void {
+  respawn(x: number, y: number, invulnerableFor = 0): void {
     this.body.reset(x, y);
+    this.invulnerableTimer = invulnerableFor;
     this.body.setGravityY(0);
     this.dropThroughTimer = 0;
     this.fallSpeed = 0;
@@ -164,7 +187,7 @@ export class Rabbit {
     // Pellets come from the rabbit's tail end (or nose end if firing forward).
     const out = POOP_TUNING.shootBackwards ? -this.facing : this.facing;
     const x = this.hitbox.x + (aim === 'drop' ? -this.facing * 8 : out * 18);
-    const y = this.body.bottom - (aim === 'drop' ? 6 : 16);
+    const y = this.body.bottom - (aim === 'drop' ? 6 : 12);
     events.shot = { x, y, ...v };
 
     this.squash(1.2, 0.82);
@@ -203,6 +226,7 @@ export class Rabbit {
       .setPosition(this.hitbox.x, this.body.bottom + bob)
       .setScale(this.squashX + chew, this.squashY - chew)
       .setAngle(this.eating ? 10 * this.facing : 0)
-      .setFlipX(this.facing < 0);
+      .setFlipX(this.facing < 0)
+      .setAlpha(this.invulnerable && Math.floor(this.invulnerableTimer * 12) % 2 === 0 ? 0.3 : 1);
   }
 }

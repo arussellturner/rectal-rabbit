@@ -12,6 +12,8 @@ export interface Rect {
   h: number;
 }
 
+import type { PredatorKind } from './predators';
+
 /** Something standing on a surface: x is its center, y is the surface top. */
 export interface Spot {
   x: number;
@@ -28,8 +30,10 @@ export interface GreyboxLevel {
   oneWays: Rect[];
   /** Patches of grass to eat. */
   grass: Spot[];
-  /** Practice targets to poop at (until predators arrive in step 3). */
+  /** Practice targets to poop at. */
   targets: Spot[];
+  /** Predators, each roaming a stretch of ground it won't leave (until step 4). */
+  predators: { kind: PredatorKind; x: number; y: number; territory: { minX: number; maxX: number } }[];
 }
 
 const GROUND_Y = 1080;
@@ -86,8 +90,12 @@ export const GREYBOX_LEVEL: GreyboxLevel = {
   targets: [
     { x: 1000, y: GROUND_Y },
     { x: 1300, y: GROUND_Y },
-    { x: 2050, y: GROUND_Y },
     { x: 2850, y: GROUND_Y },
-    { x: 4100, y: GROUND_Y },
+  ],
+  predators: [
+    // Between the first pit and the tower. The planks above are safe spots.
+    { kind: 'fox', x: 2250, y: GROUND_Y, territory: { minX: 1600, maxX: 2460 } },
+    // Under the Smash-style stack, before the hill.
+    { kind: 'fox', x: 4000, y: GROUND_Y, territory: { minX: 3240, maxX: 4260 } },
   ],
 };

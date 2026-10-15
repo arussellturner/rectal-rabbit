@@ -33,6 +33,7 @@ Other commands:
   `src/entities/tuning.ts` to keep them for good.
 - `http://localhost:5173/?debug` shows physics hitboxes plus a speed and
   "on ground" readout.
+- `http://localhost:5173/?nocones` hides the foxes' vision cones (harder!).
 - Combine them: `?tune&debug`
 
 ## Controls
@@ -57,6 +58,27 @@ Other commands:
 - Poop comes out the back, which is where chasing predators will be. Hit the
   bullseye targets to practice: three hits knocks one over.
 - Untick `shootBackwards` in the `?tune` panel if you'd rather fire forward.
+
+### Foxes (and how not to get eaten)
+
+Foxes patrol their stretch of ground and graze. Each one has a **vision cone**
+(the see-through wedge in front of it) and a **detection meter**:
+
+| Above its head | What it means | What it does |
+|---|---|---|
+| nothing | Hasn't noticed you | Wanders and grazes |
+| yellow **?** + meter | Noticed something | Stops, turns, creeps over to look. If the meter empties, it forgets you |
+| red **!** | Spotted you | Freezes for a moment: **run!** Then chases |
+| orange **?** | Lost you | Goes to where it last saw you and looks around, then gives up |
+| ⭐ stars | Pooped on | Stunned for a couple of seconds. Then it's angry |
+
+Tips:
+- The meter fills faster the closer you are, and slower if you **stand still**.
+- Walls block its view. It can't see behind itself…
+- …but it can **hear** you chewing grass and running, even through walls.
+- You're faster than a fox. Jump up onto a wooden platform and it can't
+  reach you (until step 4). It waits below for a bit, then gives up.
+- Get caught and you're back at the start.
 
 Bindings live in `src/input/bindings.ts`.
 
@@ -84,7 +106,12 @@ src/
 │   ├── KeyboardSource.ts
 │   ├── GamepadSource.ts  Browser Gamepad API, deadzone, rumble
 │   └── ActionState.ts    "just pressed" / "just released" tracking
+├── ai/                   Predator brains, no Phaser (unit tested)
+│   ├── PredatorBrain.ts  The patrol / ? / ! / chase / search / stunned state machine
+│   ├── perception.ts     Vision cone, line of sight, hearing
+│   └── geometry.ts       Line-vs-box test used for line of sight
 ├── entities/
+│   ├── Predator.ts       A fox in the level: body, art, cone, ?/! marker
 │   ├── Rabbit.ts         The player: movement, eating, shooting, squash/stretch
 │   ├── RabbitMotor.ts    Movement rules: accel, coyote time, jump buffer…
 │   ├── poopLaunch.ts     Which way and how fast a poop flies
@@ -96,19 +123,22 @@ src/
 │   ├── PoopAmmo.ts       How many poops you're carrying
 │   └── GrassState.ts     Bites left + regrowth timer
 ├── scenes/               Boot → Title → Level (+ Hud, Pause on top)
-├── data/greyboxLevel.ts  Prototype level layout (Tiled maps come in step 6)
+├── data/
+│   ├── greyboxLevel.ts   Prototype level layout (Tiled maps come in step 6)
+│   └── predators.ts      Each species' senses, speeds and timings (just data)
 └── debug/tuningPanel.ts  The ?tune slider panel
 ```
 
 Logic that doesn't need Phaser (`RabbitMotor`, `poopLaunch`, `systems/`, `ActionState`, `gamepadMath`)
-is kept separate so it can be unit tested. The predator AI in steps 3–4 will
-follow the same pattern (`src/ai/`).
+is kept separate so it can be unit tested, and so is the predator AI (`src/ai/`).
+Adding a new animal is mostly copying `FOX` in `src/data/predators.ts` and
+changing the numbers.
 
 ## Roadmap
 
 - [x] **1. The rabbit hops.** Gray-box level, keyboard + controller, jumping feels good
 - [x] **2. Eat and poop.** Grass patches, ammo counter, poop that flies in an arc
-- [ ] **3. One fox on flat ground.** Vision cone, detection meter, ? and !, chase and give up
+- [x] **3. One fox on flat ground.** Vision cone, detection meter, ? and !, chase and give up
 - [ ] **4. The fox follows you up platforms.** Nav graph + A* with jump edges
 - [ ] **5. Poop bomb.** Fill the meter, drop the trap, the fox gets stuck
 - [ ] **6. First real level.** Built in Tiled, snow tileset, exit burrow

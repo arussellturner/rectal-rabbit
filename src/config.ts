@@ -6,3 +6,5 @@ const params = new URLSearchParams(window.location.search);
 export const DEBUG = params.has('debug');
 /** `?tune` opens a slider panel for the rabbit's movement values. */
 export const TUNE = params.has('tune');
+/** Draw predators' vision cones. Hide them with `?nocones` for a harder game. */
+export const SHOW_VISION_CONES = !params.has('nocones');
