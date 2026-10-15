@@ -1,7 +1,9 @@
-import { buildWorld, burrow, joinScreens } from '../level/LevelMap';
+import { buildWorld, joinScreens } from '../../level/LevelMap';
+import { CELLAR, ROOT_MAZE } from './burrows';
+import { GROUND, ROWS, SCREEN, type LevelDef } from './types';
 
 /**
- * World 1-1: Snowy Ridge.
+ * Level 1: Snowy Ridge.
  *
  * The level is drawn in text, one screen (32 tiles wide) at a time, glued
  * together left to right. Rows are 0 (top of the sky) to 14 (bottom).
@@ -20,9 +22,6 @@ import { buildWorld, burrow, joinScreens } from '../level/LevelMap';
  * Handy numbers: the rabbit jumps about 4 tiles high and 6 tiles across.
  * The snow leopards jump about 4 high and 5 across.
  */
-const ROWS = 15;
-const SCREEN = 32;
-const GROUND = '################################';
 
 // Screen 1: rolling ridge. Learn to eat; a carrot bubble over a stone ledge.
 const screen1 = [
@@ -157,43 +156,12 @@ const screen7 = [
   GROUND,
 ];
 
-/*
- * Burrows: one screen each, underground. Draw the 12 rows inside; the dirt
- * ceiling, walls and floor are added for you. 'R' is where you drop in.
- * End a row with 'E' to open an exit tunnel in the right wall.
- * Inside a burrow:  d  packed dirt   S  stone   =  root ledge   c  carrot
- */
-const burrow1 = burrow([
-  '',
-  '.R',
-  '',
-  '..........c.c.c',
-  '',
-  '.........=======...c.c',
-  '...................====',
-  '...c.c',
-  '..=====....ddd',
-  '..........ddddd....c.c.c',
-  '.c.......ddddddd........E',
-  '.c.c.....ddddddd..c.c...E',
-]);
-
-const burrow2 = burrow([
-  '...........c.c.c',
-  '.R........======',
-  '',
-  'SSSS....c.c.c.......c.c',
-  '.......=======.....=====',
-  '',
-  '..c.c..........c.c',
-  '.=====........=====',
-  '..........c',
-  '........SSSSS.......c.c.c',
-  '.c.c.c..SSSSS...........E',
-  '........SSSSS..c.c.c....E',
-]);
-
-export const WORLD_1 = buildWorld(
-  joinScreens(ROWS, SCREEN, [screen1, screen2, screen3, screen4, screen5, screen6, screen7]),
-  [burrow1, burrow2],
-);
+export const SNOWY_RIDGE: LevelDef = {
+  name: 'SNOWY RIDGE',
+  theme: 'snow',
+  leopardSpeed: 1,
+  world: buildWorld(joinScreens(ROWS, SCREEN, [screen1, screen2, screen3, screen4, screen5, screen6, screen7]), [
+    CELLAR,
+    ROOT_MAZE,
+  ]),
+};

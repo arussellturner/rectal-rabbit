@@ -13,8 +13,10 @@ export class GrassPatch {
     private readonly scene: Phaser.Scene,
     readonly x: number,
     readonly surfaceY: number,
+    /** Texture name before "-0".."-3" (each world has its own grass). */
+    private readonly texture = 'snow-grass',
   ) {
-    this.image = scene.add.image(x, surfaceY + 2, 'grass-3').setOrigin(0.5, 1).setDepth(5);
+    this.image = scene.add.image(x, surfaceY + 2, `${texture}-3`).setOrigin(0.5, 1).setDepth(5);
   }
 
   get hasGrass(): boolean {
@@ -42,6 +44,6 @@ export class GrassPatch {
   }
 
   private refresh(): void {
-    this.image.setTexture(`grass-${Math.min(this.state.bites, 3)}`);
+    this.image.setTexture(`${this.texture}-${Math.min(this.state.bites, 3)}`);
   }
 }

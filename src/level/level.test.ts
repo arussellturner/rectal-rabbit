@@ -1,7 +1,8 @@
 import { describe, expect, it } from 'vitest';
 import { TILE } from '../config';
-import { WORLD_1 } from '../data/level1';
-import { buildWorld, burrow, joinScreens, mergeRuns, parseLevel } from './LevelMap';
+import { LEVELS } from '../data/levels';
+import { buildWorld, burrow, joinScreens, mergeRuns, parseLevel, type LevelMap } from './LevelMap';
+import { canReach, isSpot, reachableSpots, spotOf } from './reachability';
 
 describe('parseLevel', () => {
   const level = parseLevel([
@@ -73,6 +74,30 @@ describe('burrows', () => {
   });
 });
 
+describe('reachability', () => {
+  const map = (rows: string[]) => parseLevel(rows);
+  const reachHome = (rows: string[]) => {
+    const m = map(rows);
+    return canReach(reachableSpots(m, spotOf(m.spawn, TILE)), spotOf(m.home!, TILE));
+  };
+
+  it('can jump a 5-wide pit but not an 8-wide one', () => {
+    expect(reachHome(['R..........H', '####.....###', '####.....###'])).toBe(true);
+    expect(reachHome(['R.............H', '####........###', '####........###'])).toBe(false);
+  });
+
+  it('can jump up 4 tiles but not 5', () => {
+    const wall = (h: number) => [
+      ...Array.from({ length: 6 - h }, () => '......'),
+      ...Array.from({ length: h }, (_, i) => (i === 0 ? '...#H.' : '...##.')),
+      'R..##.',
+      '######',
+    ];
+    expect(reachHome(wall(3))).toBe(true);
+    expect(reachHome(wall(5))).toBe(false);
+  });
+});
+
 describe('mergeRuns', () => {
   it('turns stacked identical runs into one tall box, and others into separate boxes', () => {
     const grid = ['##..', '##.#', '####'];
@@ -94,17 +119,18 @@ describe('joinScreens', () => {
   });
 });
 
-describe('world 1', () => {
-  const level = WORLD_1.overworld;
+describe.each(LEVELS.map((l) => [l.name, l] as const))('level: %s', (_name, def) => {
+  const level = def.world.overworld;
   const standingOn = (map: typeof level, x: number, y: number) =>
     map.isFloor(Math.floor(x / TILE), Math.floor(y / TILE));
 
-  it('is one screen tall, with two burrows', () => {
+  it('is one screen tall, with a burrow under every dirt pile', () => {
     expect(level.height).toBe(720);
-    expect(WORLD_1.burrows).toHaveLength(2);
+    expect(def.world.burrows.length).toBe(level.dirtPiles.length);
+    expect(level.checkpoints.length).toBeGreaterThanOrEqual(1);
   });
 
-  it('starts, ends, and has every dirt pile and exit hole on solid ground', () => {
+  it('starts, ends, and has every dirt pile, exit hole and flag on solid ground', () => {
     for (const s of [level.spawn, level.home!, ...level.dirtPiles, ...level.exitHoles, ...level.checkpoints]) {
       expect(standingOn(level, s.x, s.y + 1), `spot at column ${Math.floor(s.x / TILE)}`).toBe(true);
     }
@@ -114,23 +140,41 @@ describe('world 1', () => {
     for (const g of level.grass) expect(standingOn(level, g.x, g.y + 1)).toBe(true);
   });
 
-  it('has no pit too wide to jump (6 tiles) without something to stand on over it', () => {
-    const groundRow = level.rows - 2;
-    let run = 0;
-    for (let col = 0; col < level.cols; col++) {
-      const bridged = Array.from({ length: level.rows }, (_, r) => level.isFloor(col, r)).some(Boolean);
-      run = level.isSolid(col, groundRow) || bridged ? 0 : run + 1;
-      expect(run, `pit ending at column ${col}`).toBeLessThanOrEqual(5);
+  it('has burrows you land in safely, with carrots to find, and can walk out of', () => {
+    for (const b of def.world.burrows) {
+      expect(b.carrots.length).toBeGreaterThanOrEqual(10);
+      const landing = landingSpot(b, spotOf(b.spawn, TILE));
+      expect(landing, 'somewhere to land below the drop-in spot').not.toBeNull();
+      const reach = reachableSpots(b, landing!);
+      // The bottom of each tunnel, where you'd walk in.
+      const exits = b.exitTunnels.map((t) => ({ col: t.x / TILE, row: t.y / TILE + t.h / TILE - 1 }));
+      expect(exits.some((e) => canReach(reach, e)), 'can reach the exit tunnel').toBe(true);
     }
   });
 
-  it('has burrows you land in safely, with carrots to find', () => {
-    for (const b of WORLD_1.burrows) {
-      expect(b.carrots.length).toBeGreaterThanOrEqual(10);
-      // Something to land on below the drop-in spot.
-      const col = Math.floor(b.spawn.x / TILE);
-      const floor = Array.from({ length: b.rows }, (_, r) => r).find((r) => r >= b.spawn.y / TILE && b.isFloor(col, r));
-      expect(floor).toBeDefined();
+  it('can be finished: the rabbit can get from the start to home (maybe via burrows)', () => {
+    const reach = reachableSpots(level, spotOf(level.spawn, TILE));
+    // Burrows take you further along: add where each one comes out.
+    for (let pass = 0; pass < 3; pass++) {
+      level.dirtPiles.forEach((pile, i) => {
+        if (canReach(reach, spotOf(pile, TILE))) {
+          for (const k of reachableSpots(level, spotOf(level.exitHoles[i], TILE))) reach.add(k);
+        }
+      });
     }
+    expect(canReach(reach, spotOf(level.home!, TILE)), 'home is reachable').toBe(true);
+    for (const cp of level.checkpoints) expect(canReach(reach, spotOf(cp, TILE)), 'checkpoint reachable').toBe(true);
+    level.dirtPiles.forEach((p, i) => expect(canReach(reach, spotOf(p, TILE)), `dirt pile ${i + 1} reachable`).toBe(true));
+  });
+
+  it('can be finished without using the burrows too', () => {
+    const reach = reachableSpots(level, spotOf(level.spawn, TILE));
+    expect(canReach(reach, spotOf(level.home!, TILE))).toBe(true);
   });
 });
+
+/** Fall straight down from `s` to the first place to stand. */
+function landingSpot(map: LevelMap, s: { col: number; row: number }): { col: number; row: number } | null {
+  for (let row = s.row; row < map.rows; row++) if (isSpot(map, s.col, row)) return { col: s.col, row };
+  return null;
+}

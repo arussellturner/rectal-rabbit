@@ -33,6 +33,7 @@ export const LEGEND = {
   H: "the rabbit's home: the finish line",
   d: 'packed dirt (burrow walls and floors)',
   E: 'burrow exit tunnel: walk into it to pop back up',
+  '~': 'water, quicksand or lava (depends on the level): falling in costs a heart',
 } as const;
 
 const SOLID = new Set(['#', 'S', 'X', 'd']);
@@ -59,6 +60,8 @@ export interface LevelMap {
   readonly exitHoles: Spot[];
   /** Burrow exit tunnel cells (pixel rectangles). */
   readonly exitTunnels: Rect[];
+  /** Water / quicksand / lava (pixel rectangles). */
+  readonly hazards: Rect[];
   /** Overworld only. */
   readonly home: Spot | null;
   tileAt(col: number, row: number): string;
@@ -149,6 +152,7 @@ export function parseLevel(grid: readonly string[], kind: MapKind = 'overworld')
     dirtPiles,
     exitHoles,
     exitTunnels,
+    hazards: mergeRuns(rows, cols, (c, r) => tileAt(c, r) === '~', false),
     home,
     tileAt,
     isSolid,

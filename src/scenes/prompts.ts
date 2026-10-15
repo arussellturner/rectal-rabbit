@@ -1,5 +1,5 @@
 import { input } from '../input/InputManager';
-import { BUTTON_LABELS } from '../input/gamepadMath';
+import { buttonName, padConfig, resolveStyle, type Bindable } from '../input/padConfig';
 
 /** Button names for on-screen prompts. Plain capitals, so the 8-bit font can draw them. */
 export interface Prompts {
@@ -14,23 +14,44 @@ export interface Prompts {
   shoot: string;
   bomb: string;
   pause: string;
+  /** Open Controller Setup. */
+  settings: string;
+}
+
+/** The name of the (first) controller button that does `action`, in the chosen button-letter style. */
+export function padButtonName(action: Bindable): string {
+  const pad = input.gamepadInfo;
+  if (!pad) return '?';
+  const profile = padConfig.profile(pad.id);
+  const button = profile.bindings[action][0];
+  return button === undefined ? '---' : buttonName(button, resolveStyle(profile.labels, pad.family));
 }
 
 /** Button names matching the device the player is using right now. */
 export function prompts(): Prompts {
   const pad = input.gamepadInfo;
   if (input.lastDevice === 'gamepad' && pad) {
-    const b = BUTTON_LABELS[pad.family];
     return {
       move: 'D-PAD',
       down: 'DOWN',
       up: 'UP',
-      jump: b.south,
-      eat: b.west,
-      shoot: b.r1,
-      bomb: b.east,
-      pause: b.start,
+      jump: padButtonName('jump'),
+      eat: padButtonName('eat'),
+      shoot: padButtonName('shoot'),
+      bomb: padButtonName('dropBomb'),
+      pause: padButtonName('pause'),
+      settings: buttonName(8, resolveStyle(padConfig.profile(pad.id).labels, pad.family)),
     };
   }
-  return { move: 'ARROWS', down: 'DOWN', up: 'UP', jump: 'SPACE', eat: 'E', shoot: 'J', bomb: 'K', pause: 'ESC' };
+  return {
+    move: 'ARROWS',
+    down: 'DOWN',
+    up: 'UP',
+    jump: 'SPACE',
+    eat: 'E',
+    shoot: 'J',
+    bomb: 'K',
+    pause: 'ESC',
+    settings: 'C',
+  };
 }

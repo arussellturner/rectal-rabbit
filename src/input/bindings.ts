@@ -8,6 +8,7 @@ export const KEY_BINDINGS: Record<Action, readonly string[]> = {
   dropBomb: ['KeyK', 'KeyB'],
   pause: ['Escape', 'KeyP'],
   confirm: ['Enter', 'Space'],
+  settings: ['KeyC'],
 };
 
 export const MOVE_KEYS = {
@@ -42,15 +43,8 @@ export const PAD = {
   HOME: 16,
 } as const;
 
-export const PAD_BINDINGS: Record<Action, readonly number[]> = {
-  jump: [PAD.SOUTH],
-  eat: [PAD.WEST],
-  shoot: [PAD.R1, PAD.R2],
-  // LB / L1 too: handy on controllers with a spare bumper (like the 8BitDo Ultimate 2C).
-  dropBomb: [PAD.EAST, PAD.L1],
-  pause: [PAD.START],
-  confirm: [PAD.SOUTH, PAD.START],
-};
+// Which controller button does which action lives in padConfig.ts, because
+// players can change it in Controller Setup.
 
 /** Keys whose browser default (scrolling the page) should be blocked. */
 export const CAPTURED_KEYS = new Set<string>([

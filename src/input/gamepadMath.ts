@@ -41,28 +41,5 @@ export function describeGamepad(id: string): PadInfo {
   return { name: 'Gamepad', family: 'generic' };
 }
 
-export interface ButtonLabels {
-  /** Bottom face button. */
-  south: string;
-  /** Right face button. */
-  east: string;
-  /** Left face button. */
-  west: string;
-  r1: string;
-  start: string;
-}
-
-/**
- * On-screen labels for the buttons we prompt for, per controller family,
- * spelled out in plain letters so they show up in the 8-bit font.
- * Buttons are by position (the browser's "standard" layout), so the bottom
- * button is always jump, whatever letter is printed on it.
- */
-export const BUTTON_LABELS: Record<PadFamily, ButtonLabels> = {
-  playstation: { south: 'CROSS', east: 'CIRCLE', west: 'SQUARE', r1: 'R1', start: 'OPTIONS' },
-  xbox: { south: 'A', east: 'B', west: 'X', r1: 'RB', start: 'MENU' },
-  nintendo: { south: 'B', east: 'A', west: 'Y', r1: 'R', start: '+' },
-  // The Ultimate 2C has Xbox-style letters: A at the bottom, B on the right.
-  eightbitdo: { south: 'A', east: 'B', west: 'X', r1: 'RB', start: 'START' },
-  generic: { south: 'A', east: 'B', west: 'X', r1: 'RB', start: 'START' },
-};
+// Button names for prompts live in padConfig.ts (buttonName), since they
+// depend on the button-letters setting in Controller Setup.

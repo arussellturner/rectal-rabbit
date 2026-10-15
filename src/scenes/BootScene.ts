@@ -1,6 +1,8 @@
 import Phaser from 'phaser';
 import { makeLevelTextures } from '../art/pixelTextures';
-import { SKIP_TITLE } from '../config';
+import { makeThemeTextures } from '../art/themeTextures';
+import { THEMES } from '../data/themes';
+import { SKIP_TITLE, START_LEVEL } from '../config';
 import { SHEETS } from '../data/spriteSheets';
 import { PIXEL_FONT } from './textStyles';
 
@@ -33,8 +35,12 @@ export class BootScene extends Phaser.Scene {
       }
     }
     makeLevelTextures(this);
+    for (const theme of Object.values(THEMES)) makeThemeTextures(this, theme);
 
-    const start = () => this.scene.start(SKIP_TITLE ? 'Level' : 'Title');
+    const start = () =>
+      SKIP_TITLE || START_LEVEL !== null
+        ? this.scene.start('Level', { index: (START_LEVEL ?? 1) - 1 })
+        : this.scene.start('Title');
     // Fonts load lazily; ask for it now, but don't wait forever if offline.
     Promise.race([document.fonts.load(`16px ${PIXEL_FONT}`), new Promise((r) => setTimeout(r, 1500))]).then(start, start);
   }

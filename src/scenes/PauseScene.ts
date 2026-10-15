@@ -20,14 +20,26 @@ export class PauseScene extends Phaser.Scene {
     const cx = GAME_WIDTH / 2;
     this.add.rectangle(cx, GAME_HEIGHT / 2, GAME_WIDTH, GAME_HEIGHT, 0x000000, 0.88);
     this.add.text(cx, 70, 'PAUSED', textStyle(48)).setOrigin(0.5);
-    this.hint = this.add.text(cx, GAME_HEIGHT - 50, '', textStyle(16, '#fce0a8')).setOrigin(0.5);
+    this.hint = this.add
+      .text(cx, GAME_HEIGHT - 50, '', textStyle(14, '#fce0a8'))
+      .setOrigin(0.5)
+      .setInteractive({ useHandCursor: true })
+      .on('pointerdown', () => {
+        this.scene.launch('ControllerSetup', { returnTo: 'Pause', how: 'wake' });
+        this.scene.sleep();
+      });
     this.legendKey = '';
   }
 
   update(): void {
     const k = prompts();
-    this.hint.setText(`PRESS ${k.pause} OR ${k.jump} TO KEEP HOPPING`);
+    this.hint.setText(`${k.pause} OR ${k.jump}: KEEP HOPPING     ${k.settings}: CONTROLLER SETUP`);
     this.drawLegend();
+    if (input.justPressed('settings')) {
+      this.scene.launch('ControllerSetup', { returnTo: 'Pause', how: 'wake' });
+      this.scene.sleep();
+      return;
+    }
     if (input.justPressed('pause') || input.justPressed('confirm')) {
       this.scene.resume('Level');
       this.scene.stop();

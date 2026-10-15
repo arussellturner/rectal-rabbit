@@ -1,5 +1,6 @@
 import { ACTIONS, emptyReading, type SourceReading } from './actions';
-import { PAD, PAD_BINDINGS } from './bindings';
+import { PAD } from './bindings';
+import { padConfig } from './padConfig';
 import { applyRadialDeadzone, describeGamepad, type PadInfo } from './gamepadMath';
 
 const STICK_DEADZONE = 0.2;
@@ -24,6 +25,10 @@ export class GamepadSource {
   private prevButtons: boolean[] = [];
   private prevStickMag = 0;
   private pad: Gamepad | null = null;
+  /** Raw button state this frame, for Controller Setup. */
+  buttons: boolean[] = [];
+  /** Buttons that went down this frame. */
+  newPresses: number[] = [];
 
   read(): SourceReading {
     this.pad = this.findPad();
@@ -31,10 +36,14 @@ export class GamepadSource {
     if (!pad) {
       this.prevButtons = [];
       this.prevStickMag = 0;
+      this.buttons = [];
+      this.newPresses = [];
       return emptyReading();
     }
 
     const buttons = pad.buttons.map((b) => b.pressed || b.value > 0.5);
+    this.buttons = buttons;
+    this.newPresses = buttons.flatMap((b, i) => (b && !this.prevButtons[i] ? [i] : []));
     const btn = (i: number) => buttons[i] ?? false;
 
     const stick = applyRadialDeadzone(pad.axes[0] ?? 0, pad.axes[1] ?? 0, STICK_DEADZONE);
@@ -55,14 +64,16 @@ export class GamepadSource {
     return {
       moveX,
       moveY,
-      held: new Set(ACTIONS.filter((a) => PAD_BINDINGS[a].some(btn))),
+      held: new Set(
+        ACTIONS.filter((a) => (a === 'settings' ? btn(PAD.SELECT) : padConfig.buttonsFor(pad.id, a).some(btn))),
+      ),
       active,
     };
   }
 
-  get info(): (PadInfo & { standardMapping: boolean }) | null {
+  get info(): (PadInfo & { id: string; standardMapping: boolean }) | null {
     if (!this.pad) return null;
-    return { ...describeGamepad(this.pad.id), standardMapping: this.pad.mapping === 'standard' };
+    return { ...describeGamepad(this.pad.id), id: this.pad.id, standardMapping: this.pad.mapping === 'standard' };
   }
 
   rumble(durationMs: number, strong = 0.5, weak = 0.5): void {

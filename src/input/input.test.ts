@@ -1,7 +1,8 @@
 import { describe, expect, it } from 'vitest';
 import type { Action, SourceReading } from './actions';
 import { ActionState, mergeReadings } from './ActionState';
-import { applyRadialDeadzone, BUTTON_LABELS, describeGamepad } from './gamepadMath';
+import { applyRadialDeadzone, describeGamepad } from './gamepadMath';
+import { buttonName, PadConfig, resolveStyle, type SettingsStore } from './padConfig';
 
 const reading = (held: Action[] = [], moveX = 0, moveY = 0, active = false): SourceReading => ({
   held: new Set(held),
@@ -66,12 +67,87 @@ describe('describeGamepad', () => {
     const pad = describeGamepad('8BitDo Ultimate 2C Wireless Controller (STANDARD GAMEPAD Vendor: 2dc8 Product: 310a)');
     expect(pad).toEqual({ name: '8BitDo Ultimate 2C', family: 'eightbitdo' });
     expect(describeGamepad('2dc8-6012-8BitDo Ultimate C').family).toBe('eightbitdo');
-    expect(BUTTON_LABELS[pad.family]).toMatchObject({ south: 'A', east: 'B', west: 'X', r1: 'RB' });
+    const style = resolveStyle('auto', pad.family);
+    expect([0, 1, 2, 3, 5].map((b) => buttonName(b, style))).toEqual(['A', 'B', 'X', 'Y', 'RB']);
+  });
+});
+
+describe('button names', () => {
+  it('follow the chosen letters, so an 8BitDo in Switch mode can still say X', () => {
+    expect(buttonName(2, resolveStyle('auto', 'nintendo'))).toBe('Y');
+    expect(buttonName(2, resolveStyle('xbox', 'nintendo'))).toBe('X');
+    expect(buttonName(0, 'playstation')).toBe('CROSS');
+    expect(buttonName(19, 'xbox')).toBe('BUTTON 19');
   });
 
-  it('only uses labels the 8-bit font can draw (plain letters, no symbols)', () => {
-    for (const labels of Object.values(BUTTON_LABELS)) {
-      for (const label of Object.values(labels)) expect(label).toMatch(/^[A-Z0-9+\- ]+$/);
+  it('only use characters the 8-bit font can draw', () => {
+    for (const style of ['xbox', 'nintendo', 'playstation'] as const) {
+      for (let b = 0; b < 17; b++) expect(buttonName(b, style)).toMatch(/^[A-Z0-9+\- ]+$/);
     }
+  });
+});
+
+describe('PadConfig (controller setup)', () => {
+  const memory = (): SettingsStore & { data: Record<string, string> } => {
+    const data: Record<string, string> = {};
+    return { data, getItem: (k) => data[k] ?? null, setItem: (k, v) => void (data[k] = v) };
+  };
+
+  it('starts with the standard layout', () => {
+    const c = new PadConfig(null);
+    expect(c.buttonsFor('pad', 'jump')).toEqual([0]);
+    expect(c.buttonsFor('pad', 'eat')).toEqual([2]);
+    expect(c.buttonsFor('pad', 'confirm')).toEqual([0, 9]);
+  });
+
+  it('moves an action to the button you press', () => {
+    const c = new PadConfig(null);
+    c.bind('pad', 'eat', 3);
+    expect(c.buttonsFor('pad', 'eat')).toEqual([3]);
+  });
+
+  it('swaps when the button already did something else, so nothing is left without a button', () => {
+    const c = new PadConfig(null);
+    c.bind('pad', 'jump', 2); // X was eat
+    expect(c.buttonsFor('pad', 'jump')).toEqual([2]);
+    expect(c.buttonsFor('pad', 'eat')).toEqual([0]); // eat gets jump's old button
+  });
+
+  it('keeps the other buttons of an action that had two', () => {
+    const c = new PadConfig(null);
+    c.bind('pad', 'jump', 7); // RT was one of the two poop buttons
+    expect(c.buttonsFor('pad', 'shoot')).toEqual([5]);
+  });
+
+  it("won't put an action on the d-pad", () => {
+    const c = new PadConfig(null);
+    c.bind('pad', 'jump', 13);
+    expect(c.buttonsFor('pad', 'jump')).toEqual([0]);
+  });
+
+  it('remembers each controller separately, between visits', () => {
+    const store = memory();
+    const a = new PadConfig(store);
+    a.bind('8BitDo', 'eat', 3);
+    a.setLabels('8BitDo', 'xbox');
+    const b = new PadConfig(store);
+    expect(b.buttonsFor('8BitDo', 'eat')).toEqual([3]);
+    expect(b.profile('8BitDo').labels).toBe('xbox');
+    expect(b.buttonsFor('PS5', 'eat')).toEqual([2]);
+  });
+
+  it('resets buttons but keeps the letters choice', () => {
+    const c = new PadConfig(null);
+    c.bind('pad', 'eat', 3);
+    c.setLabels('pad', 'nintendo');
+    c.reset('pad');
+    expect(c.buttonsFor('pad', 'eat')).toEqual([2]);
+    expect(c.profile('pad').labels).toBe('nintendo');
+  });
+
+  it('survives junk in storage', () => {
+    const store = memory();
+    store.data['rectal-rabbit.controllers'] = '{not json';
+    expect(new PadConfig(store).buttonsFor('pad', 'jump')).toEqual([0]);
   });
 });

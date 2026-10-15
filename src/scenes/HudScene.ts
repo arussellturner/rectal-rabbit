@@ -76,6 +76,8 @@ export class HudScene extends Phaser.Scene {
 
     this.add.rectangle(0, GAME_HEIGHT, GAME_WIDTH, CONTROL_BAR_H, 0x000000, 0.55).setOrigin(0, 1);
     this.padText = this.add.text(GAME_WIDTH - 20, 20, '', textStyle(10, '#e8f4ff')).setOrigin(1, 0);
+    const lv = this.level;
+    this.add.text(GAME_WIDTH - 20, 42, `LEVEL ${lv.levelIndex + 1}: ${lv.def.name}`, textStyle(10, lv.theme.accent)).setOrigin(1, 0);
     if (DEBUG) this.debugText = this.add.text(20, 160, '', textStyle(10, '#fce0a8'));
 
     this.shownAmmo = this.level.rabbit.ammo.count;

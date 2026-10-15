@@ -18,5 +18,7 @@ export const SHOW_VISION_CONES = !params.has('nocones');
 export const NO_LEOPARDS = params.has('calm');
 /** `?play` skips the title screen. */
 export const SKIP_TITLE = params.has('play');
+/** `?level=3` starts on level 3 (skips the title). */
+export const START_LEVEL = params.has('level') ? Math.max(1, Number(params.get('level')) || 1) : null;
 /** `?at=60` starts the rabbit at that tile column (for testing a later part of the level). */
 export const START_COLUMN = params.has('at') ? Number(params.get('at')) || 0 : null;

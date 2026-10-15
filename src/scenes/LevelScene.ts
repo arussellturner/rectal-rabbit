@@ -1,8 +1,11 @@
 import Phaser from 'phaser';
 import { GAME_WIDTH, NO_LEOPARDS, PIXEL, START_COLUMN, TILE, TUNE } from '../config';
-import { SKY_BANDS, TILE_VARIANTS } from '../art/pixelTextures';
-import { SNOW_LEOPARD } from '../data/chasers';
-import { WORLD_1 } from '../data/level1';
+import { TILE_VARIANTS } from '../art/pixelTextures';
+import { themeKey } from '../art/themeTextures';
+import { SNOW_LEOPARD, type ChaserConfig } from '../data/chasers';
+import { LEVELS, type LevelDef } from '../data/levels';
+import { THEMES, type Theme } from '../data/themes';
+import { progress } from '../systems/save';
 import { CarrotPickup } from '../entities/CarrotPickup';
 import { Checkpoint } from '../entities/Checkpoint';
 import { GrassPatch } from '../entities/GrassPatch';
@@ -54,8 +57,13 @@ export class LevelScene extends Phaser.Scene {
   rabbit!: Rabbit;
   lives = START_LIVES;
   carrots = 0;
-  readonly world: World = WORLD_1;
-  readonly level: LevelMap = WORLD_1.overworld;
+  /** Which level (0 = the first). */
+  levelIndex = 0;
+  def: LevelDef = LEVELS[0];
+  world: World = LEVELS[0].world;
+  level: LevelMap = LEVELS[0].world.overworld;
+  theme: Theme = THEMES.snow;
+  private leopardCfg: ChaserConfig = SNOW_LEOPARD;
 
   private mode: Mode = 'play';
   private location: Location = 'overworld';
@@ -75,7 +83,7 @@ export class LevelScene extends Phaser.Scene {
   private grassBits!: Phaser.GameObjects.Particles.ParticleEmitter;
   private poopBits!: Phaser.GameObjects.Particles.ParticleEmitter;
   private dirtBits!: Phaser.GameObjects.Particles.ParticleEmitter;
-  private snow!: Phaser.GameObjects.Particles.ParticleEmitter;
+  private weather!: Phaser.GameObjects.Particles.ParticleEmitter;
   private hint!: Phaser.GameObjects.Text;
   private lastProgress = 0;
 
@@ -94,6 +102,16 @@ export class LevelScene extends Phaser.Scene {
 
   get underground(): boolean {
     return this.location !== 'overworld';
+  }
+
+  init(data: { index?: number }): void {
+    this.levelIndex = Phaser.Math.Clamp(data?.index ?? 0, 0, LEVELS.length - 1);
+    this.def = LEVELS[this.levelIndex];
+    this.world = this.def.world;
+    this.level = this.world.overworld;
+    this.theme = THEMES[this.def.theme];
+    const speed = this.def.leopardSpeed;
+    this.leopardCfg = { ...SNOW_LEOPARD, chaseSpeed: SNOW_LEOPARD.chaseSpeed * speed, catchUpSpeed: SNOW_LEOPARD.catchUpSpeed * speed };
   }
 
   create(): void {
@@ -136,7 +154,7 @@ export class LevelScene extends Phaser.Scene {
 
     this.checkpoints = level.checkpoints.map((s) => new Checkpoint(this, s));
     if (level.home) {
-      this.add.image(level.home.x, level.home.y, 'home').setOrigin(0.5, 1).setDepth(3);
+      this.add.image(level.home.x, level.home.y, themeKey(this.theme, 'home')).setOrigin(0.5, 1).setDepth(3);
       this.add.text(level.home.x, level.home.y - 90, 'HOME', textStyle(16, '#fce0a8')).setOrigin(0.5, 1).setDepth(3);
     }
     for (const p of level.dirtPiles) this.add.image(p.x, p.y + PIXEL, 'dirt-pile').setOrigin(0.5, 1).setDepth(5);
@@ -170,7 +188,7 @@ export class LevelScene extends Phaser.Scene {
     });
 
     const home = level.home ?? level.spawn;
-    this.spawner = new LeopardSpawner({ ...DEFAULT_SPAWNER, stopX: home.x - 14 * TILE });
+    this.spawner = new LeopardSpawner({ ...DEFAULT_SPAWNER, ...this.def.spawner, stopX: home.x - 14 * TILE });
 
     this.grassBits = this.add.particles(0, 0, 'grass-bit', {
       speed: { min: 80, max: 180 },
@@ -205,7 +223,20 @@ export class LevelScene extends Phaser.Scene {
     this.scene.launch('Hud');
     this.events.once(Phaser.Scenes.Events.SHUTDOWN, () => this.scene.stop('Hud'));
 
+    this.showIntro();
     if (TUNE) void import('../debug/tuningPanel').then((m) => m.openTuningPanel());
+  }
+
+  /** "LEVEL 2 / WHISPERING WOODS" across the screen for a moment. */
+  private showIntro(): void {
+    const cx = GAME_WIDTH / 2;
+    const top = this.add
+      .text(cx, 250, `LEVEL ${this.levelIndex + 1}`, textStyle(24, '#ffffff'))
+      .setOrigin(0.5)
+      .setScrollFactor(0)
+      .setDepth(40);
+    const name = this.add.text(cx, 300, this.def.name, textStyle(40, this.theme.accent)).setOrigin(0.5).setScrollFactor(0).setDepth(40);
+    this.tweens.add({ targets: [top, name], alpha: 0, delay: 1800, duration: 600, onComplete: () => (top.destroy(), name.destroy()) });
   }
 
   update(_time: number, deltaMs: number): void {
@@ -258,6 +289,7 @@ export class LevelScene extends Phaser.Scene {
     const home = this.level.home;
     if (home && Math.abs(r.hitbox.x - home.x) < 30 && Math.abs(r.body.bottom - home.y) < 8) this.reachHome();
     else if (r.body.top > this.level.height + 40) this.fellInPit();
+    else if (this.inHazard(r.body)) this.fellInPit(true);
   }
 
   /**
@@ -293,6 +325,10 @@ export class LevelScene extends Phaser.Scene {
 
     for (const leopard of this.leopards) {
       leopard.update(dt, target, this.level, cam);
+      if (!leopard.gone && this.inHazard(leopard.body)) {
+        leopard.gone = true;
+        this.dirtBits.explode(16, leopard.hitbox.x, leopard.body.bottom);
+      }
       const canCatch = this.mode === 'play' && !this.busy && leopard.dangerous && !r.invulnerable;
       if (canCatch && this.physics.overlap(r.hitbox, leopard.hitbox)) this.caught(leopard);
     }
@@ -311,7 +347,7 @@ export class LevelScene extends Phaser.Scene {
 
   /** A new snow leopard comes running in from the left, just off screen. */
   private spawnLeopard(): void {
-    const cfg = SNOW_LEOPARD;
+    const cfg = this.leopardCfg;
     const x = this.cameras.main.scrollX - cfg.hitbox.w;
     const startCol = Math.floor(x / TILE);
     // Find solid ground to drop it on, searching backwards past any pit.
@@ -378,7 +414,18 @@ export class LevelScene extends Phaser.Scene {
     this.spawner.delay(3);
   }
 
-  private fellInPit(): void {
+  /** Is this body touching water / quicksand / lava? */
+  private inHazard(b: Phaser.Physics.Arcade.Body): boolean {
+    // A little way into it, so just brushing the surface doesn't count.
+    return this.level.hazards.some((h) => b.right > h.x + 8 && b.left < h.x + h.w - 8 && b.bottom > h.y + 12);
+  }
+
+  private fellInPit(splash = false): void {
+    if (splash) {
+      const r = this.rabbit;
+      this.dirtBits.explode(16, r.hitbox.x, r.body.bottom);
+      this.floatText(r.hitbox.x, r.body.top - 30, this.theme.liquid.name === 'LAVA' ? 'HOT HOT HOT!' : 'SPLASH!', '#ffffff', 20);
+    }
     this.cameras.main.flash(250, 255, 255, 255);
     input.rumble(150, 0.6, 0.3);
     if (this.loseLife()) return;
@@ -398,7 +445,7 @@ export class LevelScene extends Phaser.Scene {
     this.mode = 'over';
     this.rabbit.controlsLocked = true;
     this.rabbit.art.setVisible(false);
-    this.time.delayedCall(700, () => this.scene.launch('End', { won: false }));
+    this.time.delayedCall(700, () => this.scene.launch('End', { won: false, index: this.levelIndex }));
     return true;
   }
 
@@ -420,7 +467,8 @@ export class LevelScene extends Phaser.Scene {
       onComplete: () => r.art.setVisible(false),
     });
     this.floatText(r.hitbox.x, r.body.top - 60, 'HOME SAFE!', '#b8f818', 24);
-    this.time.delayedCall(1400, () => this.scene.launch('End', { won: true, carrots: this.carrots }));
+    progress.completed(this.levelIndex);
+    this.time.delayedCall(1400, () => this.scene.launch('End', { won: true, carrots: this.carrots, index: this.levelIndex }));
   }
 
   // --- Burrows ---------------------------------------------------------------
@@ -452,7 +500,7 @@ export class LevelScene extends Phaser.Scene {
       const burrow = this.burrows[i];
       this.location = i;
       this.removeLeopards(() => true);
-      this.snow.setVisible(false);
+      this.weather.setVisible(false);
       this.rabbit.respawn(burrow.x + burrow.map.spawn.x, burrow.map.spawn.y - 30, 0);
       this.endTransition();
       this.updateCamera();
@@ -471,7 +519,7 @@ export class LevelScene extends Phaser.Scene {
     cam.once(Phaser.Cameras.Scene2D.Events.FADE_OUT_COMPLETE, () => {
       const hole = this.level.exitHoles[i];
       this.location = 'overworld';
-      this.snow.setVisible(true);
+      this.weather.setVisible(true);
       cam.scrollX = Phaser.Math.Clamp(hole.x - CAMERA_LEAD, 0, this.level.width - GAME_WIDTH);
       this.rabbit.respawn(hole.x, hole.y - 30, 1);
       this.rabbit.body.setVelocityY(-720);
@@ -598,19 +646,27 @@ export class LevelScene extends Phaser.Scene {
         const x = ox + col * TILE;
         const y = row * TILE;
         const variant = (col * 7 + row * 13) % TILE_VARIANTS;
-        const openAbove = !map.isSolid(col, row - 1) && map.tileAt(col, row - 1) !== 'E';
+        const openAbove = !map.isSolid(col, row - 1) && map.tileAt(col, row - 1) !== 'E' && map.tileAt(col, row - 1) !== '~';
+        const th = (part: string) => themeKey(this.theme, part);
         let key: string | null = null;
-        if (t === '#') key = `tile-dirt-${variant}`;
+        if (t === '#') key = th(`ground-${variant}`);
         else if (t === 'd') key = `tile-burrow-${variant}`;
-        else if (t === 'S') key = 'tile-stone';
-        else if (t === 'X') key = 'tile-ice';
-        else if (t === '=') this.add.image(x, y, under ? 'tile-roots' : 'tile-log').setOrigin(0, 0).setDepth(4);
+        else if (t === 'S') key = th('ledge');
+        else if (t === 'X') key = th('block');
+        else if (t === '=') this.add.image(x, y, under ? 'tile-roots' : th('bridge')).setOrigin(0, 0).setDepth(4);
         else if (t === 'E') this.add.image(x, y, 'tunnel').setOrigin(0, 0).setDepth(2);
+        else if (t === '~') {
+          // Only the top row of a pool gets the wavy surface; below it is solid color.
+          const top = map.tileAt(col, row - 1) !== '~';
+          const img = this.add.image(x, y, th('liquid')).setOrigin(0, 0).setDepth(4.6);
+          if (!top) img.setCrop(0, 9 * PIXEL, TILE, TILE - 9 * PIXEL).setY(y - 9 * PIXEL);
+          else this.tweens.add({ targets: img, y: y + 3, duration: 700 + (col % 3) * 150, yoyo: true, repeat: -1, ease: 'Sine.InOut' });
+        }
         if (!key) continue;
         this.add.image(x, y, key).setOrigin(0, 0).setDepth(4);
         if (openAbove && row > 0) {
           if (under && t === 'd') this.add.image(x, y, 'burrow-lip').setOrigin(0, 0).setDepth(4.5);
-          else if (!under) this.add.image(x, y - 2 * PIXEL, 'snowcap').setOrigin(0, 0).setDepth(4.5);
+          else if (!under) this.add.image(x, y - 3 * PIXEL, th('cap')).setOrigin(0, 0).setDepth(4.5);
         }
       }
     }
@@ -623,19 +679,22 @@ export class LevelScene extends Phaser.Scene {
       this.add.text(ax - TILE / 2, t.y - 10, 'EXIT', textStyle(12, '#fca044')).setOrigin(0.5, 1).setDepth(3);
     }
 
-    this.grass.push(...map.grass.map((s) => new GrassPatch(this, ox + s.x, s.y)));
+    const grassKey = themeKey(this.theme, 'grass');
+    this.grass.push(...map.grass.map((s) => new GrassPatch(this, ox + s.x, s.y, grassKey)));
     this.carrotPickups.push(...map.carrots.map((c) => new CarrotPickup(this, ox + c.x, c.y, !under)));
 
-    if (!under) this.addPines(map);
+    if (!under) this.addDecorations(map);
   }
 
-  /** Snowy pine trees here and there on open ground. */
-  private addPines(map: LevelMap): void {
+  /** Trees, cacti or crystals here and there on open ground. */
+  private addDecorations(map: LevelMap): void {
+    const key = themeKey(this.theme, 'deco');
     for (let col = 3; col < map.cols - 3; col++) {
       const hash = (col * 7919) % 23;
       if (hash > 3) continue;
-      // Find the ground surface in this column.
-      let row = 1;
+      // Find the ground surface in this column (below any ceiling).
+      let row = map.rows - 3;
+      while (row > 0 && map.isSolid(col, row)) row--;
       while (row < map.rows && !map.isSolid(col, row)) row++;
       if (row >= map.rows || map.tileAt(col, row) !== '#') continue;
       if (map.tileAt(col, row - 1) !== '.' || map.tileAt(col, row - 2) !== '.') continue;
@@ -643,50 +702,65 @@ export class LevelScene extends Phaser.Scene {
       const near = (s: Spot) => Math.abs(s.x - spot.x) < 3 * TILE;
       if ((map.home && near(map.home)) || map.dirtPiles.some(near) || map.exitHoles.some(near)) continue;
       this.add
-        .image(spot.x, spot.y, 'pine')
+        .image(spot.x, spot.y, key)
         .setOrigin(0.5, 1)
         .setDepth(2)
-        .setScale(hash === 0 ? 1.0 : 0.75);
+        .setScale(hash === 0 ? 1.0 : 0.8);
     }
   }
 
-  /** Banded sky, far mountains, a dark forest line, wispy clouds, and falling snow. */
+  /** Banded sky, far scenery, closer silhouettes, clouds, and weather, all from the theme. */
   private drawBackground(): void {
     const level = this.level;
-    const bandH = Math.ceil(level.height / SKY_BANDS.length);
-    SKY_BANDS.forEach((color, i) => {
+    const t = this.theme;
+    const bandH = Math.ceil(level.height / t.sky.length);
+    t.sky.forEach((color, i) => {
       this.add.rectangle(0, i * bandH, GAME_WIDTH, bandH, color).setOrigin(0, 0).setScrollFactor(0).setDepth(-10);
     });
 
     const groundY = (level.rows - 2) * TILE;
     const span = (factor: number, extra: number) => (level.width - GAME_WIDTH) * factor + GAME_WIDTH + extra;
-    for (let x = -200, i = 0; x < span(0.15, 400); x += 380, i++) {
-      this.add
-        .image(Math.round(x + ((i * 137) % 5) * 30), groundY - 20, 'mountain')
-        .setOrigin(0.5, 1)
-        .setScrollFactor(0.15, 0)
-        .setDepth(0);
+    if (t.far.kind !== 'none') {
+      const farKey = themeKey(t, 'far');
+      const w = this.textures.get(farKey).getSourceImage().width;
+      const step = t.far.kind === 'dunes' ? w : 380;
+      for (let x = -200, i = 0; x < span(0.15, 400); x += step, i++) {
+        const jitter = t.far.kind === 'dunes' ? 0 : ((i * 137) % 5) * 30;
+        this.add
+          .image(Math.round(x + jitter), groundY - 20, farKey)
+          .setOrigin(0.5, 1)
+          .setScrollFactor(0.15, 0)
+          .setDepth(0);
+      }
     }
-    const forest = this.textures.get('forest').getSourceImage().width;
-    for (let x = 0; x < span(0.4, forest); x += forest) {
-      this.add.image(x, groundY + 10, 'forest').setOrigin(0, 1).setScrollFactor(0.4, 0).setDepth(1);
-    }
-    for (let x = 80, i = 0; x < span(0.25, 200); x += 300 + ((i * 97) % 4) * 70, i++) {
+    const midKey = themeKey(t, 'mid');
+    const midW = this.textures.get(midKey).getSourceImage().width;
+    const hanging = t.mid.kind === 'stalactites';
+    for (let x = 0; x < span(0.4, midW); x += midW) {
       this.add
-        .image(x, 50 + ((i * 53) % 5) * 34, 'cloud')
-        .setScrollFactor(0.25, 0)
+        .image(x, hanging ? 0 : groundY + 10, midKey)
+        .setOrigin(0, hanging ? 0 : 1)
+        .setScrollFactor(0.4, 0)
         .setDepth(1);
     }
+    if (t.clouds) {
+      for (let x = 80, i = 0; x < span(0.25, 200); x += 300 + ((i * 97) % 4) * 70, i++) {
+        this.add
+          .image(x, 50 + ((i * 53) % 5) * 34, themeKey(t, 'cloud'))
+          .setScrollFactor(0.25, 0)
+          .setDepth(1);
+      }
+    }
 
-    this.snow = this.add
-      .particles(0, -10, 'snowflake', {
-        x: { min: 0, max: GAME_WIDTH },
-        lifespan: 9000,
-        speedY: { min: 30, max: 70 },
-        speedX: { min: -25, max: 15 },
-        frequency: 140,
-        alpha: { start: 0.9, end: 0.4 },
-      })
+    const weather: Record<Theme['weather'], Phaser.Types.GameObjects.Particles.ParticleEmitterConfig> = {
+      snow: { x: { min: 0, max: GAME_WIDTH }, y: -10, lifespan: 9000, speedY: { min: 30, max: 70 }, speedX: { min: -25, max: 15 }, frequency: 140 },
+      leaves: { x: { min: 0, max: GAME_WIDTH }, y: -10, lifespan: 9000, speedY: { min: 40, max: 80 }, speedX: { min: -60, max: -10 }, frequency: 260, rotate: { min: 0, max: 360 } },
+      sand: { x: GAME_WIDTH + 10, y: { min: 100, max: 700 }, lifespan: 4000, speedX: { min: -420, max: -260 }, speedY: { min: -10, max: 20 }, frequency: 50 },
+      drips: { x: { min: 0, max: GAME_WIDTH }, y: 100, lifespan: 1400, speedY: { min: 300, max: 420 }, frequency: 220 },
+      embers: { x: { min: 0, max: GAME_WIDTH }, y: 730, lifespan: 6000, speedY: { min: -90, max: -40 }, speedX: { min: -20, max: 20 }, frequency: 120 },
+    };
+    this.weather = this.add
+      .particles(0, 0, themeKey(t, 'weather'), { ...weather[t.weather], alpha: { start: 0.9, end: 0.3 } })
       .setScrollFactor(0)
       .setDepth(6);
   }

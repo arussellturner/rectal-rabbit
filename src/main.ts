@@ -4,6 +4,7 @@ import { DEBUG, GAME_HEIGHT, GAME_WIDTH } from './config';
 import { TUNING } from './entities/tuning';
 import { input } from './input/InputManager';
 import { BootScene } from './scenes/BootScene';
+import { ControllerSetupScene } from './scenes/ControllerSetupScene';
 import { EndScene } from './scenes/EndScene';
 import { HudScene } from './scenes/HudScene';
 import { LevelScene } from './scenes/LevelScene';
@@ -26,7 +27,7 @@ const game = new Phaser.Game({
   },
   // Keyboard and gamepad are read by our own InputManager instead.
   input: { keyboard: false, gamepad: false },
-  scene: [BootScene, TitleScene, LevelScene, HudScene, PauseScene, EndScene],
+  scene: [BootScene, TitleScene, LevelScene, HudScene, PauseScene, EndScene, ControllerSetupScene],
 });
 
 // Read input once per frame, before any scene updates.

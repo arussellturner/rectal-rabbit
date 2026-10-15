@@ -50,6 +50,16 @@ class InputManager {
     return this.gamepad.info;
   }
 
+  /** Raw controller buttons held right now (for Controller Setup). */
+  get padButtons(): readonly boolean[] {
+    return this.gamepad.buttons;
+  }
+
+  /** Raw controller buttons that went down this frame (for Controller Setup). */
+  get padNewPresses(): readonly number[] {
+    return this.gamepad.newPresses;
+  }
+
   rumble(durationMs: number, strong?: number, weak?: number): void {
     this.gamepad.rumble(durationMs, strong, weak);
   }
