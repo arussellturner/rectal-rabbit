@@ -30,6 +30,7 @@ export class HudScene extends Phaser.Scene {
   private barRabbit!: Phaser.GameObjects.Sprite;
   private burrowText!: Phaser.GameObjects.Text;
   private controls: ButtonChip[] = [];
+  private controlBar!: Phaser.GameObjects.Rectangle;
   private controlsKey = '';
   private shownAmmo = 0;
   private bombWasReady = false;
@@ -74,10 +75,17 @@ export class HudScene extends Phaser.Scene {
       .text(GAME_WIDTH / 2, 150, 'IN A SECRET BURROW: SAFE FROM LEOPARDS!', textStyle(12, '#fca044'))
       .setOrigin(0.5, 0.5);
 
-    this.add.rectangle(0, GAME_HEIGHT, GAME_WIDTH, CONTROL_BAR_H, 0x000000, 0.55).setOrigin(0, 1);
+    this.controlBar = this.add.rectangle(0, GAME_HEIGHT, GAME_WIDTH, CONTROL_BAR_H, 0x000000, 0.55).setOrigin(0, 1);
     this.padText = this.add.text(GAME_WIDTH - 20, 20, '', textStyle(10, '#e8f4ff')).setOrigin(1, 0);
     const lv = this.level;
-    this.add.text(GAME_WIDTH - 20, 42, `LEVEL ${lv.levelIndex + 1}: ${lv.def.name}`, textStyle(10, lv.theme.accent)).setOrigin(1, 0);
+    const levelName = `LEVEL ${lv.levelIndex + 1}: ${lv.def.name}`;
+    if (input.touch.enabled) {
+      // The pause button sits in the top-right corner on phones: put the level name under the trip bar.
+      this.padText.setVisible(false);
+      this.add.text(GAME_WIDTH / 2, BAR_Y + 30, levelName, textStyle(10, lv.theme.accent)).setOrigin(0.5, 0.5);
+    } else {
+      this.add.text(GAME_WIDTH - 20, 42, levelName, textStyle(10, lv.theme.accent)).setOrigin(1, 0);
+    }
     if (DEBUG) this.debugText = this.add.text(20, 160, '', textStyle(10, '#fce0a8'));
 
     this.shownAmmo = this.level.rabbit.ammo.count;
@@ -134,10 +142,15 @@ export class HudScene extends Phaser.Scene {
 
   /** The row of button prompts along the bottom. Rebuilt when you switch keyboard/controller. */
   private refreshControls(k: Prompts): void {
-    const key = JSON.stringify(k);
+    const key = JSON.stringify(k) + input.lastDevice;
     if (key === this.controlsKey) return;
     this.controlsKey = key;
     for (const c of this.controls) c.destroy();
+    this.controls = [];
+    // On a phone the buttons are on screen already, and the bar would sit under the d-pad.
+    const touch = input.lastDevice === 'touch';
+    this.controlBar.setVisible(!touch);
+    if (touch) return;
     this.controls = chipRow(this, 18, GAME_HEIGHT - CONTROL_BAR_H / 2, [
       [k.move, 'MOVE'],
       [k.jump, 'JUMP'],

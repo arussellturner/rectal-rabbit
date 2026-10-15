@@ -31,6 +31,7 @@ export class TitleScene extends Phaser.Scene {
   private selected = 0;
   private shownLevel = -1;
   private heldX = false;
+  private levelArrows = false;
 
   constructor() {
     super('Title');
@@ -46,7 +47,18 @@ export class TitleScene extends Phaser.Scene {
     this.add.text(cx, 110, 'RECTAL RABBIT', textStyle(64, '#fce0a8')).setOrigin(0.5);
     this.add.text(cx, 180, 'EAT GRASS. POOP AT SNOW LEOPARDS. GET HOME!', textStyle(16)).setOrigin(0.5);
 
-    this.levelText = this.add.text(cx, 250, '', textStyle(20, '#ffffff')).setOrigin(0.5).setAlign('center').setLineSpacing(10);
+    this.levelText = this.add
+      .text(cx, 250, '', textStyle(20, '#ffffff'))
+      .setOrigin(0.5)
+      .setAlign('center')
+      .setLineSpacing(10)
+      .setInteractive({ useHandCursor: true })
+      .on('pointerdown', (p: Phaser.Input.Pointer) => {
+        // Tap the left or right end of the level name to change level (for phones and mice).
+        if (!this.levelArrows) return;
+        const n = progress.unlockedCount;
+        this.selected = (this.selected + (p.x < cx ? -1 : 1) + n) % n;
+      });
     this.startText = this.add.text(cx, 330, '', textStyle(22, '#ffffff')).setOrigin(0.5);
     this.tweens.add({ targets: this.startText, alpha: 0.25, duration: 500, yoyo: true, repeat: -1 });
     this.setupText = this.add
@@ -82,18 +94,25 @@ export class TitleScene extends Phaser.Scene {
     const def = LEVELS[this.selected];
     const locked = LEVELS.length - progress.unlockedCount;
     const arrows = progress.unlockedCount > 1 ? ['<  ', '  >'] : ['', ''];
+    this.levelArrows = progress.unlockedCount > 1;
     this.levelText.setText(
       `${arrows[0]}LEVEL ${this.selected + 1}: ${def.name}${arrows[1]}` +
         (locked > 0 ? `\n(${locked} MORE TO UNLOCK)` : ''),
     );
-    this.startText.setText(`PRESS ${k.jump} TO START`);
-    this.setupText.setText(`${k.settings}: CONTROLLER SETUP`);
+    const touch = input.lastDevice === 'touch';
+    this.startText.setText(touch ? 'TAP TO START' : `PRESS ${k.jump} TO START`);
+    // Controller Setup is for controllers; on a phone, only if one's plugged in.
+    const setup = touch && !input.gamepadInfo ? '' : `${touch ? 'SELECT' : k.settings}: CONTROLLER SETUP`;
+    // Hidden (so it can't be tapped by accident) when there's nothing to set up.
+    this.setupText.setText(setup).setVisible(setup !== '');
 
     const pad = input.gamepadInfo;
     this.padText.setText(
       pad
         ? `${pad.name.toUpperCase().slice(0, 48)} CONNECTED${pad.standardMapping ? '' : ' (TRY CHROME OR EDGE)'}\n\nPRESS BUTTONS TO TEST THEM:`
-        : 'USING A CONTROLLER? PRESS ANY BUTTON ON IT.',
+        : input.lastDevice === 'touch'
+          ? (this.levelArrows ? 'TAP THE ARROWS TO PICK A LEVEL' : '')
+          : 'USING A CONTROLLER? PRESS ANY BUTTON ON IT.',
     );
     this.updateChips(k, pad !== null);
 

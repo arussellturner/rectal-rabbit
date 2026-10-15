@@ -25,6 +25,7 @@ export class EndScene extends Phaser.Scene {
   init(data: EndData): void {
     this.data_ = { carrots: 0, index: 0, ...data };
     this.ready = false;
+    this.tapped = false;
   }
 
   private get index(): number {
@@ -59,13 +60,18 @@ export class EndScene extends Phaser.Scene {
     this.tweens.add({ targets: this.hint, alpha: 0.2, duration: 500, yoyo: true, repeat: -1 });
     // Don't skip straight past it with a button that was already held.
     this.time.delayedCall(700, () => (this.ready = true));
+    this.input.on('pointerdown', () => this.tapped = true);
   }
+
+  private tapped = false;
 
   update(): void {
     const k = prompts();
     const what = this.finishedGame ? 'BACK TO THE TITLE' : this.data_.won ? 'NEXT LEVEL' : 'TRY AGAIN';
-    this.hint.setText(`PRESS ${k.jump}: ${what}`);
-    if (!this.ready || !(input.justPressed('jump') || input.justPressed('confirm'))) return;
+    this.hint.setText(input.lastDevice === 'touch' ? `TAP: ${what}` : `PRESS ${k.jump}: ${what}`);
+    const go = input.justPressed('jump') || input.justPressed('confirm') || this.tapped;
+    this.tapped = false;
+    if (!this.ready || !go) return;
 
     this.scene.stop('Level');
     if (this.finishedGame) this.scene.start('Title');

@@ -101,6 +101,16 @@ Press **pause** any time for a help screen that lists every control for the
 keyboard or controller you're using. The bar along the bottom of the screen
 always shows the main ones.
 
+### Playing on a phone or tablet
+
+Open the game on your phone and on-screen controls appear: a d-pad on the
+left, **JUMP**, **EAT/DIG**, **POOP** and **BOMB** on the right, and pause
+(**II**) in the corner. Turn the phone sideways for the biggest view; held
+upright, the game sits at the top with the buttons underneath. Tap the screen
+to start, and tap the arrows by the level name to pick a level. Add the page
+to your home screen to play full screen. (`?touch` shows the touch controls
+on a computer, for testing.)
+
 ### Controller Setup
 
 Press **Select** on your controller (or **C** on the keyboard) on the title
@@ -116,18 +126,19 @@ screen or the pause screen. Then:
 3. **Reset buttons** puts everything back. Settings are saved in your browser
    for each controller.
 
-| Action | Keyboard | 8BitDo Ultimate 2C / Xbox | PS5 controller |
-|---|---|---|---|
-| Move | ← → or A D | Left stick / D-pad | Left stick / D-pad |
-| Jump (hold for higher) | Space | A | ✕ |
-| Drop through a log bridge | ↓ + Space | ↓ + A | ↓ + ✕ |
-| Eat (hold, on grass) | E | X | □ |
-| Dig (on a dirt pile) | ↓ or E | ↓ or X | ↓ or □ |
-| Poop (out the back) | J or F | RB / RT | R1 / R2 |
-| …high lob | hold ↑ + J | stick ↑ + RB | stick ↑ + R1 |
-| …drop straight down | in the air, ↓ + J | in the air, ↓ + RB | in the air, ↓ + R1 |
-| Poop bomb (costs 5) | K or B | B or LB | ○ or L1 |
-| Pause + help | Esc or P | Start | Options |
+| Action | Keyboard | Phone / tablet | 8BitDo Ultimate 2C / Xbox | PS5 controller |
+|---|---|---|---|---|
+| Move | ← → | D-pad | Left stick / D-pad | Left stick / D-pad |
+| Jump (hold for higher) | Space | JUMP | A | ✕ |
+| Drop through a log bridge | ↓ + Space | ↓ + JUMP | ↓ + A | ↓ + ✕ |
+| Eat (hold, on grass) | F | EAT/DIG | X | □ |
+| Dig (on a dirt pile) | ↓ or F | ↓ or EAT/DIG | ↓ or X | ↓ or □ |
+| Poop (out the back) | D | POOP | RB / RT | R1 / R2 |
+| …high lob | hold ↑ + D | ↑ + POOP | stick ↑ + RB | stick ↑ + R1 |
+| …drop straight down | in the air, ↓ + D | in the air, ↓ + POOP | in the air, ↓ + RB | in the air, ↓ + R1 |
+| Poop bomb (costs 5) | S | BOMB | B or LB | ○ or L1 |
+| Pause + help | P (or Esc) | II (top right) | Start | Options |
+| Controller Setup | C | | Select | Create |
 
 Bindings live in `src/input/bindings.ts`.
 

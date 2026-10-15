@@ -43,15 +43,29 @@ export function prompts(): Prompts {
       settings: buttonName(8, resolveStyle(padConfig.profile(pad.id).labels, pad.family)),
     };
   }
+  if (input.lastDevice === 'touch') {
+    // The on-screen buttons are labelled with what they do.
+    return {
+      move: 'D-PAD',
+      down: 'DOWN',
+      up: 'UP',
+      jump: 'JUMP',
+      eat: 'EAT',
+      shoot: 'POOP',
+      bomb: 'BOMB',
+      pause: 'II',
+      settings: '-',
+    };
+  }
   return {
     move: 'ARROWS',
     down: 'DOWN',
     up: 'UP',
     jump: 'SPACE',
-    eat: 'E',
-    shoot: 'J',
-    bomb: 'K',
-    pause: 'ESC',
+    eat: 'F',
+    shoot: 'D',
+    bomb: 'S',
+    pause: 'P',
     settings: 'C',
   };
 }

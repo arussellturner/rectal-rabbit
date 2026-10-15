@@ -3,19 +3,21 @@ import type { Action } from './actions';
 /** Keyboard bindings, using `KeyboardEvent.code` (layout-independent). */
 export const KEY_BINDINGS: Record<Action, readonly string[]> = {
   jump: ['Space'],
-  eat: ['KeyE'],
-  shoot: ['KeyJ', 'KeyF'],
-  dropBomb: ['KeyK', 'KeyB'],
-  pause: ['Escape', 'KeyP'],
+  eat: ['KeyF'],
+  shoot: ['KeyD'],
+  dropBomb: ['KeyS'],
+  // Esc still works too (handy for backing out of menus).
+  pause: ['KeyP', 'Escape'],
   confirm: ['Enter', 'Space'],
   settings: ['KeyC'],
 };
 
+/** Arrows only: D and S are poop and bomb, so no WASD. */
 export const MOVE_KEYS = {
-  left: ['ArrowLeft', 'KeyA'],
-  right: ['ArrowRight', 'KeyD'],
-  up: ['ArrowUp', 'KeyW'],
-  down: ['ArrowDown', 'KeyS'],
+  left: ['ArrowLeft'],
+  right: ['ArrowRight'],
+  up: ['ArrowUp'],
+  down: ['ArrowDown'],
 } as const;
 
 /**

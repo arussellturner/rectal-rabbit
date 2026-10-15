@@ -25,6 +25,7 @@ export class PauseScene extends Phaser.Scene {
       .setOrigin(0.5)
       .setInteractive({ useHandCursor: true })
       .on('pointerdown', () => {
+        if (input.lastDevice === 'touch') return;
         this.scene.launch('ControllerSetup', { returnTo: 'Pause', how: 'wake' });
         this.scene.sleep();
       });
@@ -33,7 +34,8 @@ export class PauseScene extends Phaser.Scene {
 
   update(): void {
     const k = prompts();
-    this.hint.setText(`${k.pause} OR ${k.jump}: KEEP HOPPING     ${k.settings}: CONTROLLER SETUP`);
+    const touch = input.lastDevice === 'touch';
+    this.hint.setText(touch ? 'TAP II OR JUMP TO KEEP HOPPING' : `${k.pause} OR ${k.jump}: KEEP HOPPING     ${k.settings}: CONTROLLER SETUP`);
     this.drawLegend();
     if (input.justPressed('settings')) {
       this.scene.launch('ControllerSetup', { returnTo: 'Pause', how: 'wake' });
@@ -49,7 +51,7 @@ export class PauseScene extends Phaser.Scene {
   private drawLegend(): void {
     const k = prompts();
     const pad = input.lastDevice === 'gamepad' ? input.gamepadInfo : null;
-    const key = JSON.stringify(k) + (pad?.name ?? '');
+    const key = JSON.stringify(k) + (pad?.name ?? '') + input.lastDevice;
     if (key === this.legendKey) return;
     this.legendKey = key;
     for (const o of this.legend) o.destroy();
@@ -68,7 +70,7 @@ export class PauseScene extends Phaser.Scene {
     const x = GAME_WIDTH / 2 - 330;
     this.legend = rows.map(([button, label], i) => new ButtonChip(this, x, 150 + i * 46, button, label, 14));
 
-    const device = pad ? `${pad.name.toUpperCase()}` : 'KEYBOARD';
+    const device = pad ? `${pad.name.toUpperCase()}` : input.lastDevice === 'touch' ? 'TOUCH SCREEN' : 'KEYBOARD';
     this.legend.push(this.add.text(GAME_WIDTH / 2, 120, `CONTROLS: ${device}`, textStyle(14, '#a4e4fc')).setOrigin(0.5));
     if (pad && !pad.standardMapping) {
       this.legend.push(

@@ -2,8 +2,9 @@ import type { Action } from './actions';
 import { ActionState, mergeReadings } from './ActionState';
 import { GamepadSource } from './GamepadSource';
 import { KeyboardSource } from './KeyboardSource';
+import { TouchSource } from './TouchSource';
 
-export type InputDevice = 'keyboard' | 'gamepad';
+export type InputDevice = 'keyboard' | 'gamepad' | 'touch';
 
 /**
  * The one place the game reads input from. `update()` runs once per frame,
@@ -14,16 +15,25 @@ class InputManager {
   private readonly state = new ActionState();
   private readonly keyboard = new KeyboardSource();
   private readonly gamepad = new GamepadSource();
+  /** On-screen buttons on phones and tablets. */
+  readonly touch = new TouchSource();
 
   /** Whichever device was used most recently. Drives on-screen button prompts. */
   lastDevice: InputDevice = 'keyboard';
 
+  constructor() {
+    // On a phone, show touch button names from the start.
+    if (this.touch.enabled) this.lastDevice = 'touch';
+  }
+
   update(): void {
     const k = this.keyboard.read();
     const g = this.gamepad.read();
+    const t = this.touch.read();
     if (g.active) this.lastDevice = 'gamepad';
     else if (k.active) this.lastDevice = 'keyboard';
-    this.state.apply(mergeReadings(k, g));
+    else if (t.active) this.lastDevice = 'touch';
+    this.state.apply(mergeReadings(k, g, t));
   }
 
   get moveX(): number {

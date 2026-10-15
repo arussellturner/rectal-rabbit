@@ -20,7 +20,8 @@ const game = new Phaser.Game({
   // Crisp, blocky pixels when sprites are scaled up: the 8-bit look.
   pixelArt: true,
   roundPixels: true,
-  scale: { mode: Phaser.Scale.FIT, autoCenter: Phaser.Scale.CENTER_BOTH },
+  // On phones, keep the game at the top so in portrait the buttons have room underneath.
+  scale: { mode: Phaser.Scale.FIT, autoCenter: input.touch.enabled ? Phaser.Scale.CENTER_HORIZONTALLY : Phaser.Scale.CENTER_BOTH },
   physics: {
     default: 'arcade',
     arcade: { gravity: { x: 0, y: TUNING.gravity }, debug: DEBUG },
