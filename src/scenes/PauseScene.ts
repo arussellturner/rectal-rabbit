@@ -59,9 +59,9 @@ export class PauseScene extends Phaser.Scene {
     const rows: [string, string][] = [
       [k.move, 'RUN LEFT AND RIGHT'],
       [k.jump, 'JUMP (HOLD FOR HIGHER)'],
-      [`${k.down} + ${k.jump}`, 'DROP THROUGH A LOG BRIDGE'],
+      [`${k.down} + ${k.jump.split('/')[0]}`, 'DROP THROUGH A LOG BRIDGE'],
       [k.eat, 'HOLD ON GRASS TO EAT (1 POOP PER BITE)'],
-      [`${k.down} / ${k.eat}`, 'ON A DIRT PILE: DIG INTO A BURROW'],
+      [k.eat.includes('DOWN') ? k.eat : `${k.down} / ${k.eat}`, 'ON A DIRT PILE: DIG INTO A BURROW'],
       [k.shoot, 'POOP OUT THE BACK AT LEOPARDS'],
       [`${k.up} + ${k.shoot}`, 'HIGH LOB'],
       [k.bomb, `DROP A POOP BOMB (COSTS ${BOMB_COST} POOPS)`],

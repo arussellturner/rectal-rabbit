@@ -2,8 +2,9 @@ import type { Action } from './actions';
 
 /** Keyboard bindings, using `KeyboardEvent.code` (layout-independent). */
 export const KEY_BINDINGS: Record<Action, readonly string[]> = {
-  jump: ['Space'],
-  eat: ['KeyF'],
+  // Up jumps too, and Down eats / digs too (they still aim lobs and drop through logs).
+  jump: ['Space', 'ArrowUp'],
+  eat: ['KeyF', 'ArrowDown'],
   shoot: ['KeyD'],
   dropBomb: ['KeyS'],
   // Esc still works too (handy for backing out of menus).

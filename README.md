@@ -129,10 +129,10 @@ screen or the pause screen. Then:
 | Action | Keyboard | Phone / tablet | 8BitDo Ultimate 2C / Xbox | PS5 controller |
 |---|---|---|---|---|
 | Move | ← → | D-pad | Left stick / D-pad | Left stick / D-pad |
-| Jump (hold for higher) | Space | JUMP | A | ✕ |
+| Jump (hold for higher) | Space or ↑ | JUMP | A | ✕ |
 | Drop through a log bridge | ↓ + Space | ↓ + JUMP | ↓ + A | ↓ + ✕ |
-| Eat (hold, on grass) | F | EAT/DIG | X | □ |
-| Dig (on a dirt pile) | ↓ or F | ↓ or EAT/DIG | ↓ or X | ↓ or □ |
+| Eat (hold, on grass) | F or ↓ | EAT/DIG | X | □ |
+| Dig (on a dirt pile) | F or ↓ | ↓ or EAT/DIG | ↓ or X | ↓ or □ |
 | Poop (out the back) | D | POOP | RB / RT | R1 / R2 |
 | …high lob | hold ↑ + D | ↑ + POOP | stick ↑ + RB | stick ↑ + R1 |
 | …drop straight down | in the air, ↓ + D | in the air, ↓ + POOP | in the air, ↓ + RB | in the air, ↓ + R1 |
