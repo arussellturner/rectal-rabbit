@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
 # Build the current branch and publish it to the gh-pages branch, in a folder
-# named after the branch. Once GitHub Pages is turned on for gh-pages, it's
-# playable at https://<owner>.github.io/rectal-rabbit/<branch-name>/
+# named after the branch. It.s
+# playable at https://arussellturner.github.io/rectal-rabbit/<branch-name>/
 #
 #   npm run deploy
 set -euo pipefail

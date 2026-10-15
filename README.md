@@ -29,12 +29,16 @@ Other commands:
 
 ### Playing a branch online
 
+**Play it here: https://arussellturner.github.io/rectal-rabbit/**
+
 `npm run deploy` puts a build of the current branch into its own folder on the
 `gh-pages` branch, so each branch gets its own address:
-`https://turnerm5.github.io/rectal-rabbit/<branch-name>/` (for example
-`.../rectal-rabbit/russells-branch/`). GitHub Pages has to be switched on once
-by the repo owner: **Settings → Pages → Deploy from a branch → `gh-pages`,
-`/ (root)`**.
+`https://arussellturner.github.io/rectal-rabbit/<branch-name>/` (for example
+`.../rectal-rabbit/russells-branch/`). The main address above opens
+`russells-branch`. It takes GitHub a minute or so to update after a deploy.
+
+This repo is a copy of `turnerm5/rectal-rabbit` (that one is the `upstream`
+remote; `origin` is `arussellturner/rectal-rabbit`).
 
 ### Handy URL flags
 
