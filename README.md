@@ -31,8 +31,9 @@ Other commands:
   gravity, coyote time, bite time, poop speed, and so on. Changes apply live and are remembered in
   your browser. Use **Copy values** and paste them into
   `src/entities/tuning.ts` to keep them for good.
-- `http://localhost:5173/?debug` shows physics hitboxes plus a speed and
-  "on ground" readout.
+- `http://localhost:5173/?debug` shows physics hitboxes, a speed and
+  "on ground" readout, and the foxes' **nav graph**: cyan = places a fox can
+  stand, yellow arcs = jumps it can make, green = ledges it can drop off.
 - `http://localhost:5173/?nocones` hides the foxes' vision cones (harder!).
 - Combine them: `?tune&debug`
 
@@ -88,8 +89,12 @@ Tips:
 - The meter fills faster the closer you are, and slower if you **stand still**.
 - Walls block its view. It can't see behind itself…
 - …but it can **hear** you chewing grass and running, even through walls.
-- You're faster than a fox. Jump up onto a wooden platform and it can't
-  reach you (until step 4). It waits below for a bit, then gives up.
+- You're faster than a fox on flat ground… but foxes **jump**. A fox works
+  out a route up platforms and across pits to get to you. Watch for it
+  **crouching** just before it leaps.
+- Somewhere it truly can't reach (too high)? It waits below for a bit, then
+  gives up. And it won't chase you forever: stray too far from its home turf
+  and it heads back.
 - Get caught and you're back at the start.
 
 Bindings live in `src/input/bindings.ts`.
@@ -121,9 +126,11 @@ src/
 ├── ai/                   Predator brains, no Phaser (unit tested)
 │   ├── PredatorBrain.ts  The patrol / ? / ! / chase / search / stunned state machine
 │   ├── perception.ts     Vision cone, line of sight, hearing
+│   ├── navGraph.ts       Platform pathfinding: surfaces, jump/drop edges, shortest path
+│   ├── Navigator.ts      Follows a path: run to takeoff, crouch, jump, steer, land
 │   └── geometry.ts       Line-vs-box test used for line of sight
 ├── entities/
-│   ├── Predator.ts       A fox in the level: body, art, cone, ?/! marker
+│   ├── Predator.ts       A fox in the level: brain + navigator + art, cone, ?/! marker
 │   ├── Rabbit.ts         The player: movement, eating, shooting, squash/stretch
 │   ├── RabbitMotor.ts    Movement rules: accel, coyote time, jump buffer…
 │   ├── poopLaunch.ts     Which way and how fast a poop flies
@@ -152,7 +159,7 @@ changing the numbers.
 - [x] **1. The rabbit hops.** Gray-box level, keyboard + controller, jumping feels good
 - [x] **2. Eat and poop.** Grass patches, ammo counter, poop that flies in an arc
 - [x] **3. One fox on flat ground.** Vision cone, detection meter, ? and !, chase and give up
-- [ ] **4. The fox follows you up platforms.** Nav graph + A* with jump edges
+- [x] **4. The fox follows you up platforms.** Nav graph + A* with jump edges
 - [ ] **5. Poop bomb.** Fill the meter, drop the trap, the fox gets stuck
 - [ ] **6. First real level.** Built in Tiled, snow tileset, exit burrow
 - [ ] **7. Polish.** Title screen, sounds, HUD, saving progress

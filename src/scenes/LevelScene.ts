@@ -1,10 +1,11 @@
 import Phaser from 'phaser';
-import { GAME_HEIGHT, GAME_WIDTH, TUNE } from '../config';
+import { buildNavGraph, type NavGraph } from '../ai/navGraph';
+import { DEBUG, GAME_HEIGHT, GAME_WIDTH, TUNE } from '../config';
 import { GREYBOX_LEVEL, type Rect } from '../data/greyboxLevel';
 import { PREDATORS } from '../data/predators';
 import { GrassPatch } from '../entities/GrassPatch';
 import { PoopPellets } from '../entities/PoopPellets';
-import { Predator } from '../entities/Predator';
+import { moverFor, Predator } from '../entities/Predator';
 import { PracticeTarget } from '../entities/PracticeTarget';
 import { Rabbit, type RabbitEvents } from '../entities/Rabbit';
 import { TUNING } from '../entities/tuning';
@@ -97,11 +98,18 @@ export class LevelScene extends Phaser.Scene {
       });
     }
 
-    this.predators = level.predators.map(
-      (d) => new Predator(this, PREDATORS[d.kind], d.x, d.y, d.territory),
-    );
+    // One nav graph per species (it depends on how far that animal can jump).
+    const graphs = new Map<string, NavGraph>();
+    this.predators = level.predators.map((d) => {
+      const cfg = PREDATORS[d.kind];
+      const mover = moverFor(cfg, TUNING.gravity);
+      if (!graphs.has(d.kind)) graphs.set(d.kind, buildNavGraph(level.solids, level.oneWays, mover));
+      return new Predator(this, cfg, d.x, d.y, d.territory, graphs.get(d.kind)!, mover, level.height);
+    });
+    if (DEBUG) for (const g of graphs.values()) this.drawNavGraph(g);
     for (const pred of this.predators) {
       this.physics.add.collider(pred.hitbox, solids);
+      this.physics.add.collider(pred.hitbox, oneWays);
       this.physics.add.overlap(pred.hitbox, this.pellets.group, (_h, p) => {
         const pellet = p as Phaser.Physics.Arcade.Image;
         if (!this.pellets.isFlying(pellet)) return;
@@ -270,6 +278,25 @@ export class LevelScene extends Phaser.Scene {
     this.rabbit.respawn(x, y, 1);
     this.cameras.main.flash(250, 255, 255, 255);
     input.rumble(150, 0.6, 0.3);
+  }
+
+  /** ?debug: surfaces (cyan), jumps (yellow arcs) and drops (green) the predators can use. */
+  private drawNavGraph(graph: NavGraph): void {
+    const g = this.add.graphics().setDepth(30);
+    g.lineStyle(4, 0x00e5ff, 0.8);
+    for (const s of graph.surfaces) g.lineBetween(s.x0, s.y - 2, s.x1, s.y - 2);
+    for (const e of graph.edges) {
+      const from = graph.surfaces[e.from];
+      const to = graph.surfaces[e.to];
+      const color = e.kind === 'jump' ? 0xffd54f : 0x69f0ae;
+      const curve = new Phaser.Curves.QuadraticBezier(
+        new Phaser.Math.Vector2(e.takeoffX, from.y - 4),
+        new Phaser.Math.Vector2((e.takeoffX + e.landX) / 2, Math.min(from.y, to.y) - 70),
+        new Phaser.Math.Vector2(e.landX, to.y - 4),
+      );
+      g.lineStyle(2, color, 0.6);
+      curve.draw(g, 16);
+    }
   }
 
   /** A rectangle with a colored strip on top (grass on ground, light edge on planks). */

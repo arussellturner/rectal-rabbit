@@ -12,7 +12,7 @@ import type { Perception } from './perception';
  */
 export type PredatorState = 'patrol' | 'suspicious' | 'alerted' | 'chase' | 'search' | 'stunned';
 
-/** The stretch of ground a predator stays on (it won't jump or fall off it yet). */
+/** The stretch of ground a predator patrols. It leaves it to chase, but not too far (cfg.leash). */
 export interface Territory {
   minX: number;
   maxX: number;
@@ -51,6 +51,8 @@ export class PredatorBrain {
   private patrolTarget: number | null = null;
   private grazeTimer = 0;
   private lookTimer = 0;
+  /** "Has the body got to x yet?" Supplied by the navigator each update. */
+  private arrivedAt: (x: number) => boolean = () => false;
 
   constructor(
     readonly cfg: PredatorConfig,
@@ -58,7 +60,12 @@ export class PredatorBrain {
     private readonly random: () => number = Math.random,
   ) {}
 
-  update(selfX: number, p: Perception, dt: number): Intent {
+  /**
+   * @param arrivedAt whether the body has reached x (or got as close as it
+   *   can). Defaults to a plain distance check, which is what the tests use.
+   */
+  update(selfX: number, p: Perception, dt: number, arrivedAt?: (x: number) => boolean): Intent {
+    this.arrivedAt = arrivedAt ?? ((x) => Math.abs(selfX - x) <= ARRIVED);
     this.stateTime += dt;
     this.cooldown = Math.max(0, this.cooldown - dt);
 
@@ -155,11 +162,13 @@ export class PredatorBrain {
         } else {
           this.lostSightFor += dt;
         }
-        // Standing below a rabbit it can't reach (up on a platform)?
-        const atSpot = Math.abs(selfX - this.clampToTerritory(this.lastKnownX ?? selfX)) <= ARRIVED * 3;
+        // Standing as close as it can get to a rabbit it has no way to reach?
+        const atSpot = this.arrivedAt(this.lastKnownX ?? selfX);
         this.unreachableFor = atSpot && !p.reachable ? this.unreachableFor + dt : 0;
+        const homeX = (this.territory.minX + this.territory.maxX) / 2;
+        const tooFarFromHome = Math.abs(selfX - homeX) > c.leash;
 
-        if (this.unreachableFor >= c.giveUpTime) {
+        if (this.unreachableFor >= c.giveUpTime || tooFarFromHome) {
           this.meter = 0;
           this.cooldown = c.giveUpCooldown;
           this.enter('patrol');
@@ -191,7 +200,7 @@ export class PredatorBrain {
           return this.stop();
         }
         this.patrolTarget ??= this.pickPatrolTarget(selfX);
-        if (Math.abs(selfX - this.patrolTarget) <= ARRIVED) {
+        if (this.arrivedAt(this.patrolTarget)) {
           this.patrolTarget = null;
           const [min, max] = c.grazeTime;
           this.grazeTimer = min + this.random() * (max - min);
@@ -257,12 +266,11 @@ export class PredatorBrain {
     this.onEnter?.(state);
   }
 
-  /** Head toward x (kept inside the territory); stop when there. */
+  /** Head toward x (the navigator works out how, jumps and all); stop when there. */
   private moveTo(selfX: number, x: number, speed: number): Intent {
-    const target = this.clampToTerritory(x);
-    if (Math.abs(target - selfX) <= ARRIVED) return this.stop();
-    this.facing = target > selfX ? 1 : -1;
-    return { targetX: target, speed, facing: this.facing };
+    if (this.arrivedAt(x)) return this.stop();
+    if (Math.abs(x - selfX) > 2) this.facing = x > selfX ? 1 : -1;
+    return { targetX: x, speed, facing: this.facing };
   }
 
   private stop(): Intent {
@@ -271,10 +279,6 @@ export class PredatorBrain {
 
   private face(selfX: number, x: number): void {
     if (Math.abs(x - selfX) > 2) this.facing = x > selfX ? 1 : -1;
-  }
-
-  private clampToTerritory(x: number): number {
-    return Math.min(this.territory.maxX, Math.max(this.territory.minX, x));
   }
 
   private pickPatrolTarget(selfX: number): number {

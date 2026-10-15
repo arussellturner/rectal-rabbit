@@ -38,6 +38,12 @@ export interface PredatorConfig {
   creepSpeed: number;
   chaseSpeed: number;
   accel: number;
+  /** Strongest jump (px/s upward). Jump height ≈ jumpVelocity² / (2 × gravity). */
+  jumpVelocity: number;
+  /** Crouch this long before each jump: the player's warning (s). */
+  jumpWindup: number;
+  /** Gives up a chase once this far from the middle of its territory (px). */
+  leash: number;
 
   // --- Timings (seconds) ---
   /** Random pause while grazing between patrol walks: [min, max]. */
@@ -82,6 +88,9 @@ export const FOX: PredatorConfig = {
   creepSpeed: 120,
   chaseSpeed: 255,
   accel: 1400,
+  jumpVelocity: 760, // ~180 px high: can follow you onto any plank in the gray-box level
+  jumpWindup: 0.2,
+  leash: 1500,
 
   grazeTime: [1.2, 3],
   alertPause: 0.6,

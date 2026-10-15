@@ -170,10 +170,24 @@ describe('PredatorBrain', () => {
     expect(b.state).toBe('patrol');
   });
 
-  it('never leaves its territory', () => {
+  it('patrols inside its territory but leaves it to chase', () => {
     const b = brain();
-    const intent = run(b, 900, seen(1500), 4);
-    expect(intent.targetX).toBe(1000);
+    for (let i = 0; i < 20; i++) {
+      const intent = run(b, 500, nothing, 0.5);
+      if (intent.targetX !== null) {
+        expect(intent.targetX).toBeGreaterThanOrEqual(0);
+        expect(intent.targetX).toBeLessThanOrEqual(1000);
+      }
+    }
+    expect(run(b, 900, seen(1500), 4).targetX).toBe(1500);
+  });
+
+  it('gives up a chase that strays too far from home', () => {
+    const b = brain();
+    run(b, 500, seen(700), 4);
+    expect(b.state).toBe('chase');
+    b.update(500 + FOX.leash + 10, seen(2200), DT);
+    expect(b.state).toBe('patrol');
   });
 
   it('is stunned by poop, then chases if it can see you', () => {
