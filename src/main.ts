@@ -1,8 +1,10 @@
+import '@fontsource/press-start-2p';
 import Phaser from 'phaser';
 import { DEBUG, GAME_HEIGHT, GAME_WIDTH } from './config';
 import { TUNING } from './entities/tuning';
 import { input } from './input/InputManager';
 import { BootScene } from './scenes/BootScene';
+import { EndScene } from './scenes/EndScene';
 import { HudScene } from './scenes/HudScene';
 import { LevelScene } from './scenes/LevelScene';
 import { PauseScene } from './scenes/PauseScene';
@@ -13,7 +15,9 @@ const game = new Phaser.Game({
   parent: 'game',
   width: GAME_WIDTH,
   height: GAME_HEIGHT,
-  backgroundColor: '#1b1f2a',
+  backgroundColor: '#000000',
+  // Crisp, blocky pixels when sprites are scaled up: the 8-bit look.
+  pixelArt: true,
   roundPixels: true,
   scale: { mode: Phaser.Scale.FIT, autoCenter: Phaser.Scale.CENTER_BOTH },
   physics: {
@@ -22,7 +26,7 @@ const game = new Phaser.Game({
   },
   // Keyboard and gamepad are read by our own InputManager instead.
   input: { keyboard: false, gamepad: false },
-  scene: [BootScene, TitleScene, LevelScene, HudScene, PauseScene],
+  scene: [BootScene, TitleScene, LevelScene, HudScene, PauseScene, EndScene],
 });
 
 // Read input once per frame, before any scene updates.

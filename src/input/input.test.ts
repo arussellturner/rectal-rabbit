@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import type { Action, SourceReading } from './actions';
 import { ActionState, mergeReadings } from './ActionState';
-import { applyRadialDeadzone, describeGamepad } from './gamepadMath';
+import { applyRadialDeadzone, BUTTON_LABELS, describeGamepad } from './gamepadMath';
 
 const reading = (held: Action[] = [], moveX = 0, moveY = 0, active = false): SourceReading => ({
   held: new Set(held),
@@ -60,5 +60,18 @@ describe('describeGamepad', () => {
   it('recognises Xbox and falls back to generic', () => {
     expect(describeGamepad('Xbox Wireless Controller (STANDARD GAMEPAD Vendor: 045e)').family).toBe('xbox');
     expect(describeGamepad('Some Arcade Stick').family).toBe('generic');
+  });
+
+  it('recognises an 8BitDo Ultimate 2C, with Xbox-style letters', () => {
+    const pad = describeGamepad('8BitDo Ultimate 2C Wireless Controller (STANDARD GAMEPAD Vendor: 2dc8 Product: 310a)');
+    expect(pad).toEqual({ name: '8BitDo Ultimate 2C', family: 'eightbitdo' });
+    expect(describeGamepad('2dc8-6012-8BitDo Ultimate C').family).toBe('eightbitdo');
+    expect(BUTTON_LABELS[pad.family]).toMatchObject({ south: 'A', east: 'B', west: 'X', r1: 'RB' });
+  });
+
+  it('only uses labels the 8-bit font can draw (plain letters, no symbols)', () => {
+    for (const labels of Object.values(BUTTON_LABELS)) {
+      for (const label of Object.values(labels)) expect(label).toMatch(/^[A-Z0-9+\- ]+$/);
+    }
   });
 });

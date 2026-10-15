@@ -46,7 +46,8 @@ export const PAD_BINDINGS: Record<Action, readonly number[]> = {
   jump: [PAD.SOUTH],
   eat: [PAD.WEST],
   shoot: [PAD.R1, PAD.R2],
-  dropBomb: [PAD.EAST],
+  // LB / L1 too: handy on controllers with a spare bumper (like the 8BitDo Ultimate 2C).
+  dropBomb: [PAD.EAST, PAD.L1],
   pause: [PAD.START],
   confirm: [PAD.SOUTH, PAD.START],
 };

@@ -21,6 +21,7 @@
     "url": "git+https://github.com/turnerm5/rectal-rabbit.git"
   },
   "dependencies": {
+    "@fontsource/press-start-2p": "^5.3.0",
     "phaser": "^4.2.1"
   },
   "devDependencies": {

@@ -37,14 +37,14 @@ export interface MotorTuning {
 }
 
 export const DEFAULT_TUNING: Readonly<MotorTuning> = {
-  runSpeed: 300,
+  runSpeed: 330,
   groundAccel: 2400,
   groundDecel: 2800,
   airAccel: 1600,
   airDecel: 600,
   turnMultiplier: 1.8,
 
-  jumpVelocity: 700,
+  jumpVelocity: 820,
   jumpCutMultiplier: 0.45,
   gravity: 1600,
   fallGravityMultiplier: 1.6,
@@ -87,8 +87,8 @@ export const DEFAULT_POOP_TUNING: Readonly<PoopTuning> = {
   biteTime: 0.35,
   regrowInterval: 5,
   shootCooldown: 0.22,
-  shootSpeed: 520,
-  shootLift: 280,
+  shootSpeed: 650,
+  shootLift: 380,
   inheritVelocity: 0.4,
   pelletBounce: 0.35,
   pelletLifetime: 4,

@@ -1,0 +1,12 @@
+{
+  "rabbit": {
+    "frameWidth": 36,
+    "frameHeight": 30,
+    "frames": 12
+  },
+  "snow-leopard": {
+    "frameWidth": 60,
+    "frameHeight": 39,
+    "frames": 15
+  }
+}

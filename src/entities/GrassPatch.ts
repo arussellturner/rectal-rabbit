@@ -2,7 +2,7 @@ import Phaser from 'phaser';
 import { GrassState } from '../systems/GrassState';
 import { BITES_PER_PATCH, POOP_TUNING } from './tuning';
 
-const HALF_WIDTH = 26;
+const HALF_WIDTH = 30;
 
 /** A tuft of grass sitting on a surface. Stand on it and hold Eat. */
 export class GrassPatch {
