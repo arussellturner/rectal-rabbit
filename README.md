@@ -34,8 +34,9 @@ Other commands:
 `npm run deploy` puts a build of the current branch into its own folder on the
 `gh-pages` branch, so each branch gets its own address:
 `https://arussellturner.github.io/rectal-rabbit/<branch-name>/` (for example
-`.../rectal-rabbit/russells-branch/`). The main address above opens
-`russells-branch`. It takes GitHub a minute or so to update after a deploy.
+`.../rectal-rabbit/russells-branch/`). Deploying `russells-branch` also
+updates the main address above. Deploy runs the tests first and stops if any
+fail. It takes GitHub a minute or so to update after a deploy.
 
 This repo is a copy of `turnerm5/rectal-rabbit` (that one is the `upstream`
 remote; `origin` is `arussellturner/rectal-rabbit`).
