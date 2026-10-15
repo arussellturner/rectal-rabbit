@@ -1,9 +1,14 @@
 import Phaser from 'phaser';
 import { GAME_HEIGHT, GAME_WIDTH, TUNE } from '../config';
 import { GREYBOX_LEVEL, type Rect } from '../data/greyboxLevel';
-import { Rabbit } from '../entities/Rabbit';
+import { GrassPatch } from '../entities/GrassPatch';
+import { PoopPellets } from '../entities/PoopPellets';
+import { PracticeTarget } from '../entities/PracticeTarget';
+import { Rabbit, type RabbitEvents } from '../entities/Rabbit';
 import { TUNING } from '../entities/tuning';
 import { input } from '../input/InputManager';
+import { prompts } from './prompts';
+import { textStyle } from './textStyles';
 
 const COLORS = {
   skyTop: 0x7ec8e3,
@@ -16,8 +21,18 @@ const COLORS = {
   plankTop: 0xc49a6c,
 };
 
+/** Events the HUD listens for. */
+export const LEVEL_EVENTS = {
+  EMPTY_SHOT: 'empty-shot',
+} as const;
+
 export class LevelScene extends Phaser.Scene {
   rabbit!: Rabbit;
+  private grass: GrassPatch[] = [];
+  private pellets!: PoopPellets;
+  private grassBits!: Phaser.GameObjects.Particles.ParticleEmitter;
+  private poopBits!: Phaser.GameObjects.Particles.ParticleEmitter;
+  private eatHint!: Phaser.GameObjects.Text;
 
   constructor() {
     super('Level');
@@ -46,6 +61,9 @@ export class LevelScene extends Phaser.Scene {
       body.checkCollision.right = false;
     }
 
+    this.grass = level.grass.map((s) => new GrassPatch(this, s.x, s.y));
+    const targets = level.targets.map((s) => new PracticeTarget(this, s.x, s.y));
+
     this.rabbit = new Rabbit(this, level.spawn.x, level.spawn.y);
     this.physics.add.collider(this.rabbit.hitbox, solids);
     this.physics.add.collider(
@@ -54,6 +72,42 @@ export class LevelScene extends Phaser.Scene {
       () => this.rabbit.touchedOneWay(),
       () => this.rabbit.dropThroughTimer <= 0,
     );
+
+    this.pellets = new PoopPellets(this, level.height);
+    this.physics.add.collider(this.pellets.group, solids);
+    this.physics.add.collider(this.pellets.group, oneWays);
+    for (const target of targets) {
+      this.physics.add.overlap(target.hitbox, this.pellets.group, (_t, p) => {
+        const pellet = p as Phaser.Physics.Arcade.Image;
+        if (!this.pellets.isFlying(pellet)) return;
+        const result = target.hit(pellet.x);
+        if (!result) return;
+        this.poopBits.explode(10, pellet.x, pellet.y);
+        this.pellets.kill(pellet);
+        this.floatText(target.art.x, target.art.y - 100, result === 'down' ? 'BONK!' : 'Splat!', '#ffe066');
+        input.rumble(60, 0.3, 0.2);
+      });
+    }
+
+    this.grassBits = this.add.particles(0, 0, 'grass-bit', {
+      speed: { min: 80, max: 180 },
+      angle: { min: 220, max: 320 },
+      gravityY: 900,
+      lifespan: 450,
+      rotate: { min: 0, max: 360 },
+      scale: { start: 1, end: 0.4 },
+      emitting: false,
+    }).setDepth(11);
+    this.poopBits = this.add.particles(0, 0, 'poop-bit', {
+      speed: { min: 60, max: 200 },
+      angle: { min: 200, max: 340 },
+      gravityY: 900,
+      lifespan: 500,
+      scale: { start: 1.2, end: 0 },
+      emitting: false,
+    }).setDepth(11);
+
+    this.eatHint = this.add.text(0, 0, '', textStyle(18)).setOrigin(0.5, 1).setDepth(20).setVisible(false);
 
     const cam = this.cameras.main;
     cam.setBounds(0, 0, level.width, level.height);
@@ -76,9 +130,56 @@ export class LevelScene extends Phaser.Scene {
     // Cap dt so a hiccup (or a backgrounded tab) can't launch the rabbit.
     const dt = Math.min(deltaMs / 1000, 1 / 20);
     this.physics.world.gravity.y = TUNING.gravity;
-    this.rabbit.update(dt);
+
+    for (const patch of this.grass) patch.update(dt);
+    const underfoot = this.grassUnderfoot();
+    const events = this.rabbit.update(dt, underfoot);
+    this.handleRabbitEvents(events);
+    this.pellets.update(dt);
+    this.updateEatHint(underfoot);
 
     if (this.rabbit.body.top > GREYBOX_LEVEL.height + 100) this.fellInPit();
+  }
+
+  private grassUnderfoot(): GrassPatch | null {
+    if (!this.rabbit.onGround) return null;
+    const { x } = this.rabbit.hitbox;
+    const bottom = this.rabbit.body.bottom;
+    return this.grass.find((g) => g.isUnderfoot(x, bottom)) ?? null;
+  }
+
+  private handleRabbitEvents(e: RabbitEvents): void {
+    const r = this.rabbit;
+    if (e.bite) {
+      this.grassBits.explode(6, r.hitbox.x + r.facing * 16, r.body.bottom - 4);
+      this.floatText(r.hitbox.x, r.body.top - 30, '+1 💩', '#ffffff', 16);
+    }
+    if (e.shot) {
+      this.pellets.fire(e.shot.x, e.shot.y, e.shot.vx, e.shot.vy);
+      this.poopBits.explode(3, e.shot.x, e.shot.y);
+    }
+    if (e.emptyShot) {
+      this.floatText(r.hitbox.x, r.body.top - 30, 'Empty! Eat grass', '#ffb3b3', 18);
+      this.events.emit(LEVEL_EVENTS.EMPTY_SHOT);
+    }
+    if (e.tooFull) this.floatText(r.hitbox.x, r.body.top - 30, 'Too full!', '#ffe066', 18);
+  }
+
+  /** "□ eat" bubble over the rabbit's head when standing on grass. */
+  private updateEatHint(underfoot: GrassPatch | null): void {
+    const r = this.rabbit;
+    const show = underfoot !== null && underfoot.hasGrass && !r.eating;
+    this.eatHint.setVisible(show);
+    if (!show) return;
+    this.eatHint
+      .setText(r.ammo.isFull ? 'full' : `hold ${prompts().eat} to eat`)
+      .setAlpha(r.ammo.isFull ? 0.6 : 1)
+      .setPosition(r.hitbox.x, r.body.top - 26);
+  }
+
+  private floatText(x: number, y: number, text: string, color: string, size = 22): void {
+    const t = this.add.text(x, y, text, textStyle(size, color)).setOrigin(0.5).setDepth(21);
+    this.tweens.add({ targets: t, y: y - 40, alpha: 0, duration: 800, ease: 'Cubic.Out', onComplete: () => t.destroy() });
   }
 
   private fellInPit(): void {

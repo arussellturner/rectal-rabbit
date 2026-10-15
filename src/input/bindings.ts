@@ -2,7 +2,7 @@ import type { Action } from './actions';
 
 /** Keyboard bindings, using `KeyboardEvent.code` (layout-independent). */
 export const KEY_BINDINGS: Record<Action, readonly string[]> = {
-  jump: ['Space', 'KeyW', 'ArrowUp'],
+  jump: ['Space'],
   eat: ['KeyE'],
   shoot: ['KeyJ', 'KeyF'],
   dropBomb: ['KeyK', 'KeyB'],

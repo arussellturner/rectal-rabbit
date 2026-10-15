@@ -11,6 +11,9 @@ export class BootScene extends Phaser.Scene {
 
   create(): void {
     this.makeRabbitTexture();
+    this.makeGrassTextures();
+    this.makePoopTextures();
+    this.makeTargetTexture();
     this.scene.start('Title');
   }
 
@@ -38,6 +41,58 @@ export class BootScene extends Phaser.Scene {
     g.fillStyle(pink).fillCircle(53, 33, 2.2);
 
     g.generateTexture('rabbit', 56, 56);
+    g.destroy();
+  }
+
+  /** grass-3 (full) down to grass-0 (nibbled to stubble). 48×30 each. */
+  private makeGrassTextures(): void {
+    // [x, lean, height] for each blade, tallest first so short ones draw on top.
+    const blades: [number, number, number][] = [
+      [24, 0, 28], [14, -4, 25], [34, 4, 25], [8, -6, 20], [40, 6, 20],
+      [19, -2, 22], [29, 2, 22], [4, -5, 14], [44, 5, 14],
+    ];
+    const colors = [0x5e9e34, 0x7cb342, 0x8bc34a];
+    for (let bites = 0; bites <= 3; bites++) {
+      const g = this.make.graphics({}, false);
+      const growth = bites === 0 ? 0.18 : 0.35 + 0.65 * (bites / 3);
+      const count = bites === 0 ? blades.length : 3 + bites * 2;
+      blades.slice(0, count).forEach(([x, lean, h], i) => {
+        const height = Math.max(3, h * growth);
+        g.fillStyle(colors[i % colors.length]).fillTriangle(x - 3, 30, x + 3, 30, x + lean * growth, 30 - height);
+      });
+      g.generateTexture(`grass-${bites}`, 48, 30);
+      g.destroy();
+    }
+
+    const bit = this.make.graphics({}, false);
+    bit.fillStyle(0x7cb342).fillRect(0, 0, 3, 7);
+    bit.generateTexture('grass-bit', 3, 7);
+    bit.destroy();
+  }
+
+  private makePoopTextures(): void {
+    const g = this.make.graphics({}, false);
+    g.fillStyle(0x5a3a1e).fillCircle(6, 6, 6);
+    g.fillStyle(0x7a5230).fillCircle(4.5, 4.5, 2.5);
+    g.fillStyle(0xa47a52).fillCircle(4, 4, 1);
+    g.generateTexture('poop', 12, 12);
+    g.destroy();
+
+    const bit = this.make.graphics({}, false);
+    bit.fillStyle(0x5a3a1e).fillRect(0, 0, 4, 4);
+    bit.generateTexture('poop-bit', 4, 4);
+    bit.destroy();
+  }
+
+  /** A bullseye on a post, 48×84, standing on its bottom edge. */
+  private makeTargetTexture(): void {
+    const g = this.make.graphics({}, false);
+    g.fillStyle(0x7a5a3c).fillRect(21, 40, 6, 44);
+    g.fillStyle(0x6b4e33).fillRect(14, 80, 20, 4);
+    const rings = [0xd94040, 0xffffff, 0xd94040, 0xffffff, 0xd94040];
+    rings.forEach((color, i) => g.fillStyle(color).fillCircle(24, 24, 22 - i * 4.5));
+    g.lineStyle(2, 0x1b1f2a, 0.6).strokeCircle(24, 24, 22);
+    g.generateTexture('target', 48, 84);
     g.destroy();
   }
 }

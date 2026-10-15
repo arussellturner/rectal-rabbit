@@ -35,9 +35,9 @@ export function describeGamepad(id: string): PadInfo {
 }
 
 /** On-screen labels for the buttons we prompt for, per controller family. */
-export const BUTTON_LABELS: Record<PadFamily, { south: string; start: string }> = {
-  playstation: { south: '✕', start: 'Options' },
-  xbox: { south: 'A', start: 'Menu' },
-  nintendo: { south: 'B', start: '+' },
-  generic: { south: 'A', start: 'Start' },
+export const BUTTON_LABELS: Record<PadFamily, { south: string; west: string; r1: string; start: string }> = {
+  playstation: { south: '✕', west: '□', r1: 'R1', start: 'Options' },
+  xbox: { south: 'A', west: 'X', r1: 'RB', start: 'Menu' },
+  nintendo: { south: 'B', west: 'Y', r1: 'R', start: '+' },
+  generic: { south: 'A', west: 'X', r1: 'RB', start: 'Start' },
 };

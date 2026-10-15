@@ -28,7 +28,7 @@ Other commands:
 ### Handy URL flags
 
 - `http://localhost:5173/?tune` opens a slider panel for jump height, speed,
-  gravity, coyote time, and so on. Changes apply live and are remembered in
+  gravity, coyote time, bite time, poop speed, and so on. Changes apply live and are remembered in
   your browser. Use **Copy values** and paste them into
   `src/entities/tuning.ts` to keep them for good.
 - `http://localhost:5173/?debug` shows physics hitboxes plus a speed and
@@ -40,12 +40,23 @@ Other commands:
 | Action | Keyboard | PS5 controller | Xbox |
 |---|---|---|---|
 | Move | ← → or A D | Left stick / D-pad | Left stick / D-pad |
-| Jump (hold for higher) | Space, W or ↑ | ✕ | A |
+| Jump (hold for higher) | Space | ✕ | A |
 | Drop through a wooden platform | ↓ + Space | ↓ + ✕ | ↓ + A |
+| Eat (hold, standing on grass) | E | □ | X |
+| Poop (out the back) | J or F | R1 / R2 | RB / RT |
+| …high lob | hold ↑ + J | stick ↑ + R1 | stick ↑ + RB |
+| …drop straight down | in the air, ↓ + J | in the air, ↓ + R1 | in the air, ↓ + RB |
 | Pause | Esc or P | Options | Menu |
-| *Eat (step 2)* | *E* | *□* | *X* |
-| *Shoot poop (step 2)* | *J or F* | *R1 / R2* | *RB / RT* |
 | *Drop poop bomb (step 5)* | *K or B* | *○* | *B* |
+
+### How eating and pooping work
+
+- Each grass patch has 3 bites. Hold Eat on it to chew; every bite is one poop.
+- You carry up to 10 poops (the meter in the top-left). A full rabbit can't eat.
+- Nibbled grass grows back one bite every 5 seconds.
+- Poop comes out the back, which is where chasing predators will be. Hit the
+  bullseye targets to practice: three hits knocks one over.
+- Untick `shootBackwards` in the `?tune` panel if you'd rather fire forward.
 
 Bindings live in `src/input/bindings.ts`.
 
@@ -74,22 +85,29 @@ src/
 │   ├── GamepadSource.ts  Browser Gamepad API, deadzone, rumble
 │   └── ActionState.ts    "just pressed" / "just released" tracking
 ├── entities/
-│   ├── Rabbit.ts         The player (hitbox + art + squash/stretch)
+│   ├── Rabbit.ts         The player: movement, eating, shooting, squash/stretch
 │   ├── RabbitMotor.ts    Movement rules: accel, coyote time, jump buffer…
-│   └── tuning.ts         All the movement numbers
+│   ├── poopLaunch.ts     Which way and how fast a poop flies
+│   ├── GrassPatch.ts     A tuft of grass that shrinks and regrows
+│   ├── PoopPellets.ts    Flying/landed poop pellets
+│   ├── PracticeTarget.ts Bullseyes to aim at
+│   └── tuning.ts         All the movement and poop numbers
+├── systems/
+│   ├── PoopAmmo.ts       How many poops you're carrying
+│   └── GrassState.ts     Bites left + regrowth timer
 ├── scenes/               Boot → Title → Level (+ Hud, Pause on top)
 ├── data/greyboxLevel.ts  Prototype level layout (Tiled maps come in step 6)
 └── debug/tuningPanel.ts  The ?tune slider panel
 ```
 
-Logic that doesn't need Phaser (`RabbitMotor`, `ActionState`, `gamepadMath`)
+Logic that doesn't need Phaser (`RabbitMotor`, `poopLaunch`, `systems/`, `ActionState`, `gamepadMath`)
 is kept separate so it can be unit tested. The predator AI in steps 3–4 will
 follow the same pattern (`src/ai/`).
 
 ## Roadmap
 
 - [x] **1. The rabbit hops.** Gray-box level, keyboard + controller, jumping feels good
-- [ ] **2. Eat and poop.** Grass patches, ammo counter, poop that flies in an arc
+- [x] **2. Eat and poop.** Grass patches, ammo counter, poop that flies in an arc
 - [ ] **3. One fox on flat ground.** Vision cone, detection meter, ? and !, chase and give up
 - [ ] **4. The fox follows you up platforms.** Nav graph + A* with jump edges
 - [ ] **5. Poop bomb.** Fill the meter, drop the trap, the fox gets stuck

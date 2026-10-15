@@ -1,10 +1,17 @@
 import GUI from 'lil-gui';
-import { DEFAULT_TUNING, TUNING, type MotorTuning } from '../entities/tuning';
+import {
+  DEFAULT_POOP_TUNING,
+  DEFAULT_TUNING,
+  POOP_TUNING,
+  TUNING,
+  type MotorTuning,
+  type PoopTuning,
+} from '../entities/tuning';
 
-const STORAGE_KEY = 'rectal-rabbit.tuning';
+/** [min, max, step] for each number slider; `null` for checkboxes. */
+type Ranges<T> = { [K in keyof T]: T[K] extends number ? [number, number, number] : null };
 
-/** [min, max, step] for each slider. */
-const RANGES: Record<keyof MotorTuning, [number, number, number]> = {
+const MOTOR_RANGES: Ranges<MotorTuning> = {
   runSpeed: [100, 600, 10],
   groundAccel: [200, 6000, 100],
   groundDecel: [200, 6000, 100],
@@ -21,53 +28,74 @@ const RANGES: Record<keyof MotorTuning, [number, number, number]> = {
   dropThroughTime: [0.05, 0.6, 0.01],
 };
 
+const POOP_RANGES: Ranges<PoopTuning> = {
+  biteTime: [0.05, 1, 0.05],
+  regrowInterval: [0.5, 20, 0.5],
+  shootCooldown: [0, 1, 0.02],
+  shootSpeed: [100, 1000, 10],
+  shootLift: [0, 900, 10],
+  inheritVelocity: [0, 1, 0.05],
+  pelletBounce: [0, 1, 0.05],
+  pelletLifetime: [0.5, 15, 0.5],
+  shootBackwards: null,
+};
+
 let gui: GUI | null = null;
 
-/** Live sliders for TUNING (open the game with `?tune`). Values persist in this browser. */
+/** Live sliders for the tuning values (open the game with `?tune`). Values persist in this browser. */
 export function openTuningPanel(): void {
   if (gui) return;
-  loadSaved();
-
   gui = new GUI({ title: 'Rabbit tuning' });
-  for (const key of Object.keys(RANGES) as (keyof MotorTuning)[]) {
-    const [min, max, step] = RANGES[key];
-    gui.add(TUNING, key, min, max, step).onChange(save);
-  }
-  gui.add(
-    {
-      copy: () => {
-        const json = JSON.stringify(TUNING, null, 2);
-        void navigator.clipboard?.writeText(json);
-        console.log('Rabbit tuning (paste into src/entities/tuning.ts):\n', json);
-      },
-    },
-    'copy',
-  ).name('📋 Copy values');
-  gui.add(
-    {
-      reset: () => {
-        Object.assign(TUNING, DEFAULT_TUNING);
-        save();
-        gui?.controllersRecursive().forEach((c) => c.updateDisplay());
-      },
-    },
-    'reset',
-  ).name('↺ Reset to defaults');
+  addSection(gui, 'Movement', 'rectal-rabbit.tuning', TUNING, DEFAULT_TUNING, MOTOR_RANGES, 'entities/tuning.ts → DEFAULT_TUNING');
+  addSection(gui, 'Poop', 'rectal-rabbit.poopTuning', POOP_TUNING, DEFAULT_POOP_TUNING, POOP_RANGES, 'entities/tuning.ts → DEFAULT_POOP_TUNING');
 }
 
-function save(): void {
-  try {
-    localStorage.setItem(STORAGE_KEY, JSON.stringify(TUNING));
-  } catch {
-    /* storage unavailable (private window): sliders still work for this session */
+function addSection<T extends object>(
+  root: GUI,
+  title: string,
+  storageKey: string,
+  live: T,
+  defaults: Readonly<T>,
+  ranges: Ranges<T>,
+  pasteHint: string,
+): void {
+  load(storageKey, live, defaults);
+  const folder = root.addFolder(title);
+  const save = () => {
+    try {
+      localStorage.setItem(storageKey, JSON.stringify(live));
+    } catch {
+      /* storage unavailable (private window): sliders still work for this session */
+    }
+  };
+
+  for (const key of Object.keys(ranges) as (keyof T & string)[]) {
+    const range = ranges[key] as [number, number, number] | null;
+    const controller = range ? folder.add(live, key, ...range) : folder.add(live, key);
+    controller.onChange(save);
   }
+
+  const actions = {
+    copy: () => {
+      const json = JSON.stringify(live, null, 2);
+      void navigator.clipboard?.writeText(json);
+      console.log(`${title} tuning (paste into src/${pasteHint}):\n`, json);
+    },
+    reset: () => {
+      Object.assign(live, defaults);
+      save();
+      folder.controllersRecursive().forEach((c) => c.updateDisplay());
+    },
+  };
+  folder.add(actions, 'copy').name('📋 Copy values');
+  folder.add(actions, 'reset').name('↺ Reset to defaults');
 }
 
-function loadSaved(): void {
+function load<T extends object>(storageKey: string, live: T, defaults: Readonly<T>): void {
   try {
-    const saved = JSON.parse(localStorage.getItem(STORAGE_KEY) ?? '{}') as Partial<MotorTuning>;
-    for (const key of Object.keys(DEFAULT_TUNING) as (keyof MotorTuning)[]) {
-      if (typeof saved[key] === 'number') TUNING[key] = saved[key];
+    const saved = JSON.parse(localStorage.getItem(storageKey) ?? '{}') as Partial<T>;
+    for (const key of Object.keys(defaults) as (keyof T)[]) {
+      if (typeof saved[key] === typeof defaults[key]) live[key] = saved[key] as T[keyof T];
     }
   } catch {
     /* ignore bad or unavailable storage */
