@@ -87,7 +87,7 @@ export const THEMES: Record<ThemeId, Theme> = {
     block: { style: 'crate', base: '#9c6c34', light: '#c8945c', dark: '#5c3a10', edge: '#3c2008', shine: '#e0b07c' },
     bridge: { style: 'log', top: '#e0b07c', base: '#9c6c34', dark: '#5c3a10' },
     grass: ['#8ca83c', '#b8c860', '#5c7424'],
-    liquid: { name: 'QUICKSAND', top: '#fcd090', base: '#c8945c', deep: '#9c6c34' },
+    liquid: { name: 'QUICKSAND', top: '#c8945c', base: '#8c5c2c', deep: '#5c3a10' },
     far: { kind: 'dunes', color: '#e8a868', shade: '#d08c50', cap: '#f4c084', capShade: '#e8a868' },
     mid: { kind: 'mesas', color: '#b0603c' },
     deco: 'cactus',
