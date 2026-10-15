@@ -44,6 +44,7 @@ export class PredatorBrain {
   onEnter?: (state: PredatorState) => void;
 
   private stateTime = 0;
+  private stunFor = 0;
   private sinceStimulus = Infinity;
   private lostSightFor = 0;
   private unreachableFor = 0;
@@ -62,7 +63,7 @@ export class PredatorBrain {
     this.cooldown = Math.max(0, this.cooldown - dt);
 
     if (this.state === 'stunned') {
-      if (this.stateTime < this.cfg.stunTime) return this.stop();
+      if (this.stateTime < this.stunFor) return this.stop();
       if (p.sees) {
         this.lastKnownX = p.rabbitX;
         this.enter('chase');
@@ -76,11 +77,18 @@ export class PredatorBrain {
     return this.behave(selfX, p, dt);
   }
 
-  /** Hit by a poop pellet fired from `fromX`. */
-  stun(fromX: number): void {
-    if (this.state === 'stunned') return;
+  /**
+   * Hit by a poop pellet fired from `fromX`. Bigger poops stun for longer
+   * (`seconds`); getting hit again while stunned can only make it longer.
+   */
+  stun(fromX: number, seconds = this.cfg.stunTime): void {
     this.lastKnownX = fromX;
     this.cooldown = 0;
+    if (this.state === 'stunned') {
+      this.stunFor = Math.max(this.stunFor, this.stateTime + seconds);
+      return;
+    }
+    this.stunFor = seconds;
     this.enter('stunned');
   }
 

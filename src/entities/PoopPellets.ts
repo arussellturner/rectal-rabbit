@@ -3,6 +3,14 @@ import { POOP_TUNING } from './tuning';
 
 type Pellet = Phaser.Physics.Arcade.Image;
 
+export interface PelletOptions {
+  /** Visual and hitbox scale (1 = normal poop). */
+  size?: number;
+  /** How hard it hits: stun length, knockback, target damage (1 = normal). */
+  power?: number;
+  tint?: number;
+}
+
 const FADE_TIME = 0.5;
 
 /**
@@ -16,21 +24,30 @@ export class PoopPellets {
     scene: Phaser.Scene,
     private readonly worldHeight: number,
   ) {
-    this.group = scene.physics.add.group({ classType: Phaser.Physics.Arcade.Image, defaultKey: 'poop', maxSize: 60 });
+    // Big enough for a full-meter torrent plus whatever is already lying around.
+    this.group = scene.physics.add.group({ classType: Phaser.Physics.Arcade.Image, defaultKey: 'poop', maxSize: 160 });
   }
 
-  fire(x: number, y: number, vx: number, vy: number): void {
+  fire(x: number, y: number, vx: number, vy: number, opts: PelletOptions = {}): void {
     const pellet = (this.group.get(x, y) as Pellet | null) ?? this.recycleOldest();
     if (!pellet) return;
-    pellet.setActive(true).setVisible(true).setAlpha(1).setAngle(0).setDepth(8);
+    const size = opts.size ?? 1;
+    pellet.setActive(true).setVisible(true).setAlpha(1).setAngle(0).setDepth(8).setScale(size);
+    if (opts.tint === undefined) pellet.clearTint();
+    else pellet.setTint(opts.tint);
     const body = pellet.body as Phaser.Physics.Arcade.Body;
     body.enable = true;
     body.reset(x, y);
-    body.setCircle(7, -1, -1); // a little bigger than it looks: near-misses count
+    // A little bigger than it looks, so near-misses count. Scales with `size`.
+    body.setCircle(7, -1, -1);
     body.setVelocity(vx, vy);
     body.setBounce(POOP_TUNING.pelletBounce, POOP_TUNING.pelletBounce);
     // originX: where it was fired from, so a hit predator knows where to look.
-    pellet.setData({ flying: true, landedFor: 0, originX: x });
+    pellet.setData({ flying: true, landedFor: 0, originX: x, power: opts.power ?? 1 });
+  }
+
+  powerOf(pellet: Phaser.GameObjects.GameObject): number {
+    return (pellet.getData('power') as number | undefined) ?? 1;
   }
 
   isFlying(pellet: Phaser.GameObjects.GameObject): boolean {

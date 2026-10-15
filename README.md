@@ -44,7 +44,9 @@ Other commands:
 | Jump (hold for higher) | Space | ✕ | A |
 | Drop through a wooden platform | ↓ + Space | ↓ + ✕ | ↓ + A |
 | Eat (hold, standing on grass) | E | □ | X |
-| Poop (out the back) | J or F | R1 / R2 | RB / RT |
+| Poop (out the back) | tap J or F | tap R1 / R2 | tap RB / RT |
+| SUPER POOP | hold J, let go to fire | hold R1 / R2 | hold RB / RT |
+| Cancel a SUPER POOP charge | Space (jumps too) or L | ✕ (jumps too) or L1 / L2 | A (jumps too) or LB / LT |
 | …high lob | hold ↑ + J | stick ↑ + R1 | stick ↑ + RB |
 | …drop straight down | in the air, ↓ + J | in the air, ↓ + R1 | in the air, ↓ + RB |
 | Pause | Esc or P | Options | Menu |
@@ -58,6 +60,16 @@ Other commands:
 - Poop comes out the back, which is where chasing predators will be. Hit the
   bullseye targets to practice: three hits knocks one over.
 - Untick `shootBackwards` in the `?tune` panel if you'd rather fire forward.
+
+### SUPER POOP
+
+- **Hold** the poop button to charge. The rabbit plants its feet, and a glow
+  over the meter shows how many poops the shot will use (one more every 0.2 s).
+- **Let go** to fire one big poop. Bigger = stuns longer and knocks foxes back.
+- With a **full meter (10)**, charge all the way (the meter goes rainbow and
+  says TORRENT!) and let go: a torrent of diarrhea, plus a giant SUPER POOP!
+- **Jump** to cancel (and leap away), or **L / L1** to cancel on the spot.
+  Cancelling costs nothing.
 
 ### Foxes (and how not to get eaten)
 
@@ -121,6 +133,7 @@ src/
 │   └── tuning.ts         All the movement and poop numbers
 ├── systems/
 │   ├── PoopAmmo.ts       How many poops you're carrying
+│   ├── PoopCharge.ts     Tap vs hold, SUPER POOP charge, torrent, cancel
 │   └── GrassState.ts     Bites left + regrowth timer
 ├── scenes/               Boot → Title → Level (+ Hud, Pause on top)
 ├── data/

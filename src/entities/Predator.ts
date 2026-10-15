@@ -4,6 +4,7 @@ import { perceive, type RabbitSnapshot } from '../ai/perception';
 import { PredatorBrain, type PredatorState, type Territory } from '../ai/PredatorBrain';
 import { SHOW_VISION_CONES } from '../config';
 import type { PredatorConfig } from '../data/predators';
+import { stunMultiplier } from '../systems/PoopCharge';
 import { approach } from './RabbitMotor';
 import { textStyle } from '../scenes/textStyles';
 
@@ -85,12 +86,16 @@ export class Predator {
     this.drawIndicator();
   }
 
-  /** Hit by a poop pellet. Returns false if it was already stunned. */
-  stun(fromX: number): boolean {
-    if (this.brain.state === 'stunned') return false;
-    this.brain.stun(fromX);
-    this.body.setVelocityX(0);
-    return true;
+  /**
+   * Hit by a poop pellet of the given power (1 = normal). Bigger poops stun
+   * longer and knock it back. Returns true if this hit newly stunned it.
+   */
+  stun(fromX: number, power = 1): boolean {
+    const wasStunned = this.brain.state === 'stunned';
+    this.brain.stun(fromX, this.cfg.stunTime * stunMultiplier(power));
+    const away = this.hitbox.x >= fromX ? 1 : -1;
+    this.body.setVelocityX(power > 1 ? away * Math.min(450, 120 + 40 * power) : 0);
+    return !wasStunned;
   }
 
   private onStateChange(state: PredatorState): void {

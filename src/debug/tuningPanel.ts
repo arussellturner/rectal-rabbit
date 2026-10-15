@@ -38,6 +38,11 @@ const POOP_RANGES: Ranges<PoopTuning> = {
   pelletBounce: [0, 1, 0.05],
   pelletLifetime: [0.5, 15, 0.5],
   shootBackwards: null,
+  tapThreshold: [0.05, 0.6, 0.01],
+  chargePerPoop: [0.05, 0.6, 0.01],
+  bigPoopGrowth: [0, 0.6, 0.02],
+  torrentDuration: [0.3, 4, 0.1],
+  torrentRate: [5, 120, 1],
 };
 
 let gui: GUI | null = null;

@@ -21,19 +21,23 @@ export class PracticeTarget {
     scene.physics.add.existing(this.hitbox, true);
   }
 
-  /** Returns 'hit', 'down' (this hit knocked it over), or null if it's already down. */
-  hit(fromX: number): 'hit' | 'down' | null {
+  /**
+   * Returns 'hit', 'down' (this hit knocked it over), or null if it's already down.
+   * A big poop counts as `power` hits.
+   */
+  hit(fromX: number, power = 1): 'hit' | 'down' | null {
     if (this.knockedDown) return null;
-    this.hits++;
+    this.hits += Math.max(1, Math.round(power));
     const away = fromX < this.art.x ? 1 : -1;
 
-    if (this.hits % HITS_TO_KNOCK_DOWN !== 0) {
+    if (this.hits < HITS_TO_KNOCK_DOWN) {
       this.scene.tweens.killTweensOf(this.art);
       this.art.setAngle(0);
       this.scene.tweens.add({ targets: this.art, angle: 14 * away, duration: 80, yoyo: true, repeat: 1, ease: 'Sine.InOut' });
       return 'hit';
     }
 
+    this.hits = 0;
     this.knockedDown = true;
     this.setHittable(false);
     this.scene.tweens.killTweensOf(this.art);

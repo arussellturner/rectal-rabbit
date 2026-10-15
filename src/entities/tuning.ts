@@ -78,6 +78,17 @@ export interface PoopTuning {
   pelletLifetime: number;
   /** Poop comes out the back (where chasing predators will be). Untick to fire forward. */
   shootBackwards: boolean;
+
+  /** SUPER POOP: hold longer than this to start charging instead of a single poop (s). */
+  tapThreshold: number;
+  /** SUPER POOP: seconds to add each extra poop to the charge. */
+  chargePerPoop: number;
+  /** SUPER POOP: how much bigger the pellet gets per poop in the charge. */
+  bigPoopGrowth: number;
+  /** Full-meter torrent: how long it sprays (s). */
+  torrentDuration: number;
+  /** Full-meter torrent: pellets per second. */
+  torrentRate: number;
 }
 
 export const MAX_AMMO = 10;
@@ -93,6 +104,12 @@ export const DEFAULT_POOP_TUNING: Readonly<PoopTuning> = {
   pelletBounce: 0.35,
   pelletLifetime: 4,
   shootBackwards: true,
+
+  tapThreshold: 0.22,
+  chargePerPoop: 0.2,
+  bigPoopGrowth: 0.22,
+  torrentDuration: 1.6,
+  torrentRate: 45,
 };
 
 export const POOP_TUNING: PoopTuning = { ...DEFAULT_POOP_TUNING };

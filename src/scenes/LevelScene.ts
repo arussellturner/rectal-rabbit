@@ -26,7 +26,11 @@ const COLORS = {
 /** Events the HUD listens for. */
 export const LEVEL_EVENTS = {
   EMPTY_SHOT: 'empty-shot',
+  /** The full-meter torrent: the HUD shows the giant SUPER POOP! text. */
+  SUPER_POOP: 'super-poop',
 } as const;
+
+const RAINBOW = [0xff5252, 0xffa726, 0xffeb3b, 0x66bb6a, 0x42a5f5, 0xab47bc, 0xf06292];
 
 export class LevelScene extends Phaser.Scene {
   rabbit!: Rabbit;
@@ -35,6 +39,7 @@ export class LevelScene extends Phaser.Scene {
   private predators: Predator[] = [];
   private grassBits!: Phaser.GameObjects.Particles.ParticleEmitter;
   private poopBits!: Phaser.GameObjects.Particles.ParticleEmitter;
+  private confetti!: Phaser.GameObjects.Particles.ParticleEmitter;
   private eatHint!: Phaser.GameObjects.Text;
 
   constructor() {
@@ -83,7 +88,7 @@ export class LevelScene extends Phaser.Scene {
       this.physics.add.overlap(target.hitbox, this.pellets.group, (_t, p) => {
         const pellet = p as Phaser.Physics.Arcade.Image;
         if (!this.pellets.isFlying(pellet)) return;
-        const result = target.hit(pellet.x);
+        const result = target.hit(pellet.x, this.pellets.powerOf(pellet));
         if (!result) return;
         this.poopBits.explode(10, pellet.x, pellet.y);
         this.pellets.kill(pellet);
@@ -100,11 +105,13 @@ export class LevelScene extends Phaser.Scene {
       this.physics.add.overlap(pred.hitbox, this.pellets.group, (_h, p) => {
         const pellet = p as Phaser.Physics.Arcade.Image;
         if (!this.pellets.isFlying(pellet)) return;
-        this.poopBits.explode(12, pellet.x, pellet.y);
+        const power = this.pellets.powerOf(pellet);
+        this.poopBits.explode(Math.min(24, 8 + 2 * power), pellet.x, pellet.y);
         const originX = pellet.getData('originX') as number;
         this.pellets.kill(pellet);
-        if (pred.stun(originX)) {
-          this.floatText(pred.hitbox.x, pred.body.top - 50, 'BONK! 💫', '#ffe066', 26);
+        if (pred.stun(originX, power)) {
+          const big = power > 1 && power < 4; // (4 = torrent pellets: no text spam)
+          this.floatText(pred.hitbox.x, pred.body.top - 50, big ? 'MEGA BONK! 💫' : 'BONK! 💫', '#ffe066', big ? 32 : 26);
           input.rumble(80, 0.4, 0.3);
         }
       });
@@ -127,6 +134,17 @@ export class LevelScene extends Phaser.Scene {
       scale: { start: 1.2, end: 0 },
       emitting: false,
     }).setDepth(11);
+
+    this.confetti = this.add.particles(0, 0, 'star', {
+      speed: { min: 150, max: 450 },
+      angle: { min: 200, max: 340 },
+      gravityY: 700,
+      lifespan: 1400,
+      rotate: { min: 0, max: 360 },
+      scale: { start: 1.4, end: 0.3 },
+      tint: RAINBOW,
+      emitting: false,
+    }).setDepth(12);
 
     this.eatHint = this.add.text(0, 0, '', textStyle(18)).setOrigin(0.5, 1).setDepth(20).setVisible(false);
 
@@ -203,9 +221,25 @@ export class LevelScene extends Phaser.Scene {
       this.grassBits.explode(6, r.hitbox.x + r.facing * 16, r.body.bottom - 4);
       this.floatText(r.hitbox.x, r.body.top - 30, '+1 💩', '#ffffff', 16);
     }
-    if (e.shot) {
-      this.pellets.fire(e.shot.x, e.shot.y, e.shot.vx, e.shot.vy);
-      this.poopBits.explode(3, e.shot.x, e.shot.y);
+    for (const s of e.shots) {
+      this.pellets.fire(s.x, s.y, s.vx, s.vy, { size: s.size, power: s.power, tint: s.tint });
+      this.poopBits.explode(e.shots.length > 1 ? 1 : 3 + 2 * s.power, s.x, s.y);
+    }
+    if (e.bigPoop) {
+      const k = e.bigPoop / 10;
+      this.floatText(r.hitbox.x, r.body.top - 40, `×${e.bigPoop} SUPER POOP!`, '#ffd54f', 22 + Math.round(16 * k));
+      this.cameras.main.shake(120 + 200 * k, 0.003 + 0.008 * k);
+    }
+    if (e.torrentStarted) {
+      const cam = this.cameras.main;
+      cam.shake(1700, 0.012);
+      cam.flash(200, 255, 230, 120);
+      this.confetti.explode(70, r.hitbox.x, r.body.top);
+      this.events.emit(LEVEL_EVENTS.SUPER_POOP);
+    }
+    if (e.chargeCancelled) {
+      this.poopBits.explode(4, r.hitbox.x - r.facing * 16, r.body.bottom - 10);
+      this.floatText(r.hitbox.x, r.body.top - 30, 'pfft', '#d7ccc8', 18);
     }
     if (e.emptyShot) {
       this.floatText(r.hitbox.x, r.body.top - 30, 'Empty! Eat grass', '#ffb3b3', 18);

@@ -5,6 +5,8 @@ export const KEY_BINDINGS: Record<Action, readonly string[]> = {
   jump: ['Space'],
   eat: ['KeyE'],
   shoot: ['KeyJ', 'KeyF'],
+  /** Cancels a SUPER POOP charge without jumping (jump cancels it too). */
+  cancel: ['KeyL'],
   dropBomb: ['KeyK', 'KeyB'],
   pause: ['Escape', 'KeyP'],
   confirm: ['Enter', 'Space'],
@@ -46,6 +48,7 @@ export const PAD_BINDINGS: Record<Action, readonly number[]> = {
   jump: [PAD.SOUTH],
   eat: [PAD.WEST],
   shoot: [PAD.R1, PAD.R2],
+  cancel: [PAD.L1, PAD.L2],
   dropBomb: [PAD.EAST],
   pause: [PAD.START],
   confirm: [PAD.SOUTH, PAD.START],
