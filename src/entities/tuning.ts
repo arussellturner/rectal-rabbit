@@ -57,3 +57,42 @@ export const DEFAULT_TUNING: Readonly<MotorTuning> = {
 
 /** The live values the game reads every frame (the tuning panel edits this). */
 export const TUNING: MotorTuning = { ...DEFAULT_TUNING };
+
+/** Eating and pooping. Also editable live with `?tune`. */
+export interface PoopTuning {
+  /** Seconds of chewing per bite of grass. Each bite = one poop. */
+  biteTime: number;
+  /** Seconds for an eaten patch to regrow one bite. */
+  regrowInterval: number;
+  /** Minimum seconds between shots. */
+  shootCooldown: number;
+  /** Horizontal launch speed of a pellet (px/s). */
+  shootSpeed: number;
+  /** Upward launch speed of a pellet (px/s). */
+  shootLift: number;
+  /** How much of the rabbit's own running speed the pellet keeps (0..1). */
+  inheritVelocity: number;
+  /** How bouncy pellets are when they land (0 = splat, 1 = superball). */
+  pelletBounce: number;
+  /** Seconds a landed pellet stays on the ground before fading. */
+  pelletLifetime: number;
+  /** Poop comes out the back (where chasing predators will be). Untick to fire forward. */
+  shootBackwards: boolean;
+}
+
+export const MAX_AMMO = 10;
+export const BITES_PER_PATCH = 3;
+
+export const DEFAULT_POOP_TUNING: Readonly<PoopTuning> = {
+  biteTime: 0.35,
+  regrowInterval: 5,
+  shootCooldown: 0.22,
+  shootSpeed: 460,
+  shootLift: 320,
+  inheritVelocity: 0.4,
+  pelletBounce: 0.35,
+  pelletLifetime: 4,
+  shootBackwards: true,
+};
+
+export const POOP_TUNING: PoopTuning = { ...DEFAULT_POOP_TUNING };
