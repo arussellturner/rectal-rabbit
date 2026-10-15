@@ -25,6 +25,16 @@ Other commands:
 | `npm run typecheck` | TypeScript check |
 | `npm run build` | Production build into `dist/` |
 | `npm run preview` | Serve the `dist/` build (opening `dist/index.html` directly won't work) |
+| `npm run deploy` | Build this branch and publish it to the `gh-pages` branch, in a folder named after the branch (see below) |
+
+### Playing a branch online
+
+`npm run deploy` puts a build of the current branch into its own folder on the
+`gh-pages` branch, so each branch gets its own address:
+`https://turnerm5.github.io/rectal-rabbit/<branch-name>/` (for example
+`.../rectal-rabbit/russells-branch/`). GitHub Pages has to be switched on once
+by the repo owner: **Settings → Pages → Deploy from a branch → `gh-pages`,
+`/ (root)`**.
 
 ### Handy URL flags
 

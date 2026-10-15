@@ -14,7 +14,8 @@
     "preview": "vite preview",
     "typecheck": "tsc",
     "test": "vitest run",
-    "test:watch": "vitest"
+    "test:watch": "vitest",
+    "deploy": "bash tools/deploy-branch.sh"
   },
   "repository": {
     "type": "git",
