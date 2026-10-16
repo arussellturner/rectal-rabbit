@@ -979,7 +979,8 @@ export class LevelScene extends Phaser.Scene {
       // (On the keyboard, the eat key name already says DOWN.)
       if (pile !== null) text = k.eat.includes('DOWN') ? `${k.eat}: DIG` : `${k.down} OR ${k.eat}: DIG`;
       else if (underfoot?.hasGrass && !r.eating) {
-        text = r.ammo.isFull ? 'FULL' : input.lastDevice === 'touch' ? 'HOLD EAT' : `HOLD ${k.eat}: EAT`;
+        const eat = k.eat.includes('DOWN') ? k.eat : `${k.eat}/${k.down}`;
+        text = r.ammo.isFull ? 'FULL' : input.lastDevice === 'touch' ? 'HOLD EAT/DOWN' : `HOLD ${eat}: EAT`;
         alpha = r.ammo.isFull ? 0.6 : 1;
       }
     }

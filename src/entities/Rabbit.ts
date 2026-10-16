@@ -77,6 +77,8 @@ export class Rabbit {
   private landTimer = 0;
   private poopTimer = 0;
   private stunTimer = 0;
+  /** Was down held last frame (so "too full" only pops up once per press)? */
+  private downWasHeld = false;
   /** The see-through brown bubble around the rabbit while the shield is up. */
   private readonly shield: Phaser.GameObjects.Arc;
 
@@ -210,9 +212,13 @@ export class Rabbit {
 
   private updateEating(dt: number, grass: Edible | null, jumpPressed: boolean, events: RabbitEvents): void {
     const onGrass = this.onGround && grass !== null && grass.hasGrass;
-    if (input.justPressed('eat') && onGrass && this.ammo.isFull) events.tooFull = true;
+    // Holding down eats too (the d-pad or stick on a controller, the touch d-pad).
+    const downHeld = input.moveY > 0.6;
+    const startedDown = downHeld && !this.downWasHeld;
+    this.downWasHeld = downHeld;
+    if ((input.justPressed('eat') || startedDown) && onGrass && this.ammo.isFull) events.tooFull = true;
 
-    if (input.isDown('eat') && onGrass && !this.ammo.isFull && !jumpPressed) {
+    if ((input.isDown('eat') || downHeld) && onGrass && !this.ammo.isFull && !jumpPressed) {
       this.eating = true;
       this.eatTimer += dt;
       if (this.eatTimer >= POOP_TUNING.biteTime && grass.bite()) {
