@@ -200,6 +200,10 @@ def main() -> int:
         meta[sheet.name] = {"frameWidth": fw, "frameHeight": fh, "frames": len(frames)}
         print(f"{sheet.name}: {len(frames)} frames of {fw}x{fh}")
     (OUT / "sheets.json").write_text(json.dumps(meta, indent=2) + "\n")
+    # The hand-drawn extra rabbit frames (vomiting) go on the end.
+    import rabbit_extra_frames
+
+    rabbit_extra_frames.main()
     return 0
 
 

@@ -33,6 +33,8 @@ export const RABBIT_SHEET: SheetDef = {
     { key: 'rabbit-air', frames: [6], frameRate: 1, repeat: 0 },
     { key: 'rabbit-land', frames: [7], frameRate: 1, repeat: 0 },
     { key: 'rabbit-poop', frames: [8, 9, 10, 11], frameRate: 20, repeat: 0 },
+    // Hand-drawn (tools/rabbit_extra_frames.py): mouth opens, then really wide.
+    { key: 'rabbit-vomit', frames: [12, 13], frameRate: 20, repeat: 0 },
   ],
 };
 

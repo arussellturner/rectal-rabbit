@@ -246,6 +246,11 @@ sprites are drawn with 2×2 screen pixels per art pixel (ours are 3×3), so they
 look a little finer. The ice wolf and golden eagle are his wolf and hawk,
 tinted.
 
+The two vomiting frames (eyes squeezed shut, mouth opening really wide with
+buck teeth and tongue out) aren't in the drawing: they're drawn pixel by
+pixel in `tools/rabbit_extra_frames.py`, which adds them to the end of
+`rabbit.png` (`extract_sprites.py` runs it for you).
+
 Which frames make up which animation (run, jump, poop, getting hit, falling
 down, rolling away) is listed in `src/data/spriteSheets.ts`.
 

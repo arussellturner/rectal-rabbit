@@ -294,6 +294,9 @@ export class Rabbit {
     }
     events.vomit = { dir: this.facing };
     this.squash(0.85, 1.12);
+    // Mouth wide open for as long as the vomit keeps coming.
+    this.poopTimer = 0.35;
+    this.art.play('rabbit-vomit', true);
     input.rumble(90, 0.3, 0.4);
   }
 

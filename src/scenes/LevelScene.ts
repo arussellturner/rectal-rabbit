@@ -708,8 +708,9 @@ export class LevelScene extends Phaser.Scene {
       return;
     }
     const r = this.rabbit;
-    const mouthX = r.hitbox.x + spew.dir * 22;
-    const mouthY = r.body.top + 14;
+    // Where the wide-open mouth is on the vomit frame.
+    const mouthX = r.hitbox.x + spew.dir * 34;
+    const mouthY = r.body.bottom - 24;
     // Straight out the front in a line.
     this.vomitStream[spew.dir].explode(8, mouthX, mouthY + Phaser.Math.Between(-3, 3));
 
