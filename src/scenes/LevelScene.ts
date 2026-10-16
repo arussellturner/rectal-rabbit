@@ -151,7 +151,9 @@ export class LevelScene extends Phaser.Scene {
   private poopBits!: Phaser.GameObjects.Particles.ParticleEmitter;
   private dirtBits!: Phaser.GameObjects.Particles.ParticleEmitter;
   private flames!: Phaser.GameObjects.Particles.ParticleEmitter;
-  private vomitBits!: Phaser.GameObjects.Particles.ParticleEmitter;
+  /** The vomit stream, one emitter per direction (so it shoots in a straight line), and the splat where it hits. */
+  private vomitStream!: Record<1 | -1, Phaser.GameObjects.Particles.ParticleEmitter>;
+  private vomitSplat!: Phaser.GameObjects.Particles.ParticleEmitter;
   /** Vomit spewing right now: which way, how long it has left, and who it's already hit. */
   private spew: { dir: 1 | -1; left: number; hit: Set<Enemy> } | null = null;
   private smoke!: Phaser.GameObjects.Particles.ParticleEmitter;
@@ -328,11 +330,23 @@ export class LevelScene extends Phaser.Scene {
       color: FLAME_COLORS,
       emitting: false,
     }).setDepth(12);
-    this.vomitBits = this.add.particles(0, 0, 'flame-bit', {
-      speed: { min: 380, max: 620 },
+    // A tight, fast, nearly flat stream: straight out the front, about VOMIT.reach long.
+    const stream = (angle: { min: number; max: number }) =>
+      this.add.particles(0, 0, 'flame-bit', {
+        angle,
+        speed: { min: 620, max: 700 },
+        gravityY: 150,
+        lifespan: { min: 250, max: 290 },
+        scale: { start: 1.8, end: 1.2 },
+        tint: VOMIT.colors,
+        emitting: false,
+      }).setDepth(11);
+    this.vomitStream = { 1: stream({ min: -2, max: 2 }), [-1]: stream({ min: 178, max: 182 }) };
+    this.vomitSplat = this.add.particles(0, 0, 'flame-bit', {
+      speed: { min: 80, max: 240 },
       gravityY: 900,
-      lifespan: { min: 260, max: 420 },
-      scale: { start: 1.6, end: 0.7 },
+      lifespan: { min: 250, max: 450 },
+      scale: { start: 1.4, end: 0.6 },
       tint: VOMIT.colors,
       emitting: false,
     }).setDepth(11);
@@ -690,10 +704,8 @@ export class LevelScene extends Phaser.Scene {
     const r = this.rabbit;
     const mouthX = r.hitbox.x + spew.dir * 22;
     const mouthY = r.body.top + 14;
-    // Out the front, spreading a little and falling.
-    const angle = spew.dir > 0 ? { min: -25, max: 10 } : { min: 170, max: 205 };
-    this.vomitBits.updateConfig({ angle });
-    this.vomitBits.explode(6, mouthX, mouthY);
+    // Straight out the front in a line.
+    this.vomitStream[spew.dir].explode(8, mouthX, mouthY + Phaser.Math.Between(-3, 3));
 
     const box: Box = {
       left: spew.dir > 0 ? r.hitbox.x : r.hitbox.x - VOMIT.reach,
@@ -705,7 +717,7 @@ export class LevelScene extends Phaser.Scene {
       if (e.gone || e.brain.leaving || spew.hit.has(e)) continue;
       if (boxGap(box, e.body) > 0) continue;
       spew.hit.add(e);
-      this.vomitBits.explode(10, e.hitbox.x, e.body.center.y);
+      this.vomitSplat.explode(14, e.hitbox.x - spew.dir * 10, mouthY);
       this.afterHit(e, e.hit(r.hitbox.x, spew.dir * 300), 'BLEURGH!');
     }
   }
