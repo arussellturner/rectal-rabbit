@@ -928,7 +928,7 @@ export class LevelScene extends Phaser.Scene {
       this.floatText(r.hitbox.x, r.body.top - 40, '+1', '#ffffff', 16);
     }
     if (e.shot) {
-      this.pellets.fire(e.shot.x, e.shot.y, e.shot.vx, e.shot.vy);
+      this.pellets.fire(e.shot.x, e.shot.y, e.shot.vx, e.shot.vy, e.shot.gravity);
       this.poopBits.explode(3, e.shot.x, e.shot.y);
     }
     if (e.emptyShot) {

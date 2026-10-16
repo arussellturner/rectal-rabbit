@@ -26,7 +26,7 @@ export interface Edible {
 /** What happened this frame, for the level to react to (particles, sounds, HUD). */
 export interface RabbitEvents {
   bite: boolean;
-  shot: { x: number; y: number; vx: number; vy: number } | null;
+  shot: { x: number; y: number; vx: number; vy: number; gravity: number } | null;
   /** Pressed shoot with nothing in the tank. */
   emptyShot: boolean;
   /** Pressed eat on grass while already full. */
@@ -252,7 +252,7 @@ export class Rabbit {
     const out = POOP_TUNING.shootBackwards ? -this.facing : this.facing;
     const x = this.hitbox.x + (aim === 'drop' ? -this.facing * 8 : out * 26);
     const y = this.body.bottom - (aim === 'drop' ? 6 : 14);
-    events.shot = { x, y, ...v };
+    events.shot = { x, y, ...v, gravity: aim === 'drop' ? 1 : POOP_TUNING.pelletGravity };
 
     this.squash(1.1, 0.9);
     this.poopTimer = 0.2;

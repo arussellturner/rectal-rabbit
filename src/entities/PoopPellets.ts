@@ -1,5 +1,5 @@
 import Phaser from 'phaser';
-import { POOP_TUNING } from './tuning';
+import { POOP_TUNING, TUNING } from './tuning';
 
 type Pellet = Phaser.Physics.Arcade.Image;
 
@@ -19,7 +19,8 @@ export class PoopPellets {
     this.group = scene.physics.add.group({ classType: Phaser.Physics.Arcade.Image, defaultKey: 'poop', maxSize: 60 });
   }
 
-  fire(x: number, y: number, vx: number, vy: number): void {
+  /** `gravity`: how much gravity pulls on it while it flies (1 = full; shots use less, so they fly flat and far). */
+  fire(x: number, y: number, vx: number, vy: number, gravity = 1): void {
     const pellet = (this.group.get(x, y) as Pellet | null) ?? this.recycleOldest();
     if (!pellet) return;
     pellet.setActive(true).setVisible(true).setAlpha(1).setAngle(0).setDepth(8);
@@ -28,6 +29,8 @@ export class PoopPellets {
     body.reset(x, y);
     body.setCircle(7, -1, -1); // a little bigger than it looks: near-misses count
     body.setVelocity(vx, vy);
+    // Extra gravity on top of the world's (negative = lighter).
+    body.setGravityY(TUNING.gravity * (gravity - 1));
     body.setBounce(POOP_TUNING.pelletBounce, POOP_TUNING.pelletBounce);
     // originX: where it was fired from, so a hit predator knows where to look.
     pellet.setData({ flying: true, landedFor: 0, originX: x });
@@ -57,6 +60,7 @@ export class PoopPellets {
 
       if (body.blocked.down || body.touching.down) {
         pellet.setData('flying', false);
+        body.setGravityY(0);
         body.velocity.x *= Math.exp(-10 * dt); // ground friction
         if (Math.abs(body.velocity.y) < 40) body.setBounce(0, 0); // done bouncing: settle
       }

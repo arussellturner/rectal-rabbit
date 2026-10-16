@@ -70,6 +70,8 @@ export interface PoopTuning {
   shootSpeed: number;
   /** Upward launch speed of a pellet (px/s). */
   shootLift: number;
+  /** How much gravity pulls on a shot pellet while it flies (1 = full, like everything else). Lower = flatter, farther. */
+  pelletGravity: number;
   /** How much of the rabbit's own running speed the pellet keeps (0..1). */
   inheritVelocity: number;
   /** How bouncy pellets are when they land (0 = splat, 1 = superball). */
@@ -87,8 +89,10 @@ export const DEFAULT_POOP_TUNING: Readonly<PoopTuning> = {
   biteTime: 0.35,
   regrowInterval: 5,
   shootCooldown: 0.22,
-  shootSpeed: 650,
-  shootLift: 380,
+  // Fast and low, with light gravity: poop goes a long way, nearly straight out.
+  shootSpeed: 1000,
+  shootLift: 200,
+  pelletGravity: 0.35,
   inheritVelocity: 0.4,
   pelletBounce: 0.35,
   pelletLifetime: 4,

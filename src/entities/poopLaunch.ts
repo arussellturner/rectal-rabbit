@@ -4,7 +4,7 @@ export type PoopAim = 'normal' | 'lob' | 'drop';
 
 /**
  * Starting velocity of a poop pellet.
- * - normal: an arc out the back (or front, if shootBackwards is off)
+ * - normal: fast and nearly flat, out the back (or front, if shootBackwards is off)
  * - lob: hold up for a high, short arc (over a ledge, onto a platform)
  * - drop: hold down in mid-air to drop one straight down (bombs away)
  */
@@ -18,6 +18,6 @@ export function poopLaunchVelocity(
   if (aim === 'drop') return { vx: inherited, vy: 150 };
 
   const dir = t.shootBackwards ? -facing : facing;
-  if (aim === 'lob') return { vx: dir * t.shootSpeed * 0.45 + inherited, vy: -t.shootLift * 1.9 };
+  if (aim === 'lob') return { vx: dir * t.shootSpeed * 0.2 + inherited, vy: -t.shootLift * 2.1 };
   return { vx: dir * t.shootSpeed + inherited, vy: -t.shootLift };
 }
