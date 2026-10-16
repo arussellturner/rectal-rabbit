@@ -71,8 +71,9 @@ fall in are gone.
 
 ## How to play
 
-- Run right to reach your **home** at the end of the level. The screen only
-  scrolls forward.
+- Run right to reach your **home** at the end of the level. You can run back
+  the way you came too (to grab a carrot you missed, say): the screen follows
+  you both ways.
 - **Snow leopards** sneak up from behind. A red **!** flashes at the left edge
   of the screen when one is about to show up. They're a bit slower than you, so
   you can outrun them, but not while you stop to eat. They jump over walls,

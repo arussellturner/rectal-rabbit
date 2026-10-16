@@ -40,8 +40,14 @@ export const LEVEL_EVENTS = {
 } as const;
 
 export const START_LIVES = 3;
-/** The camera keeps the rabbit this far from the left edge (it never scrolls back). */
+/** Running right, the camera keeps the rabbit this far from the left edge (more room to see ahead). */
 const CAMERA_LEAD = GAME_WIDTH * 0.4;
+/** Running back left, it keeps it this far from the left edge (more room to see behind). */
+const CAMERA_BACK_LEAD = GAME_WIDTH * 0.6;
+/** How quickly the camera slides over when the rabbit turns around (bigger = snappier). */
+const CAMERA_EASE = 5;
+/** However the camera is sliding, the rabbit never gets closer than this to either edge. */
+const CAMERA_EDGE = GAME_WIDTH * 0.2;
 /** Seconds the rabbit blinks (can't be caught) after losing a life. */
 const SAFE_TIME = 2;
 /** Gap between the overworld and the burrows, which live off to the right of it. */
@@ -153,6 +159,9 @@ export class LevelScene extends Phaser.Scene {
   /** The jaws are closing (slow motion) on this predator's catch. */
   private catching: { by: Enemy; left: number } | null = null;
   private nearMisses = new Map<Enemy, NearMiss>();
+  /** Which way the camera is leading (the way the rabbit last ran), and its exact scroll (before rounding). */
+  private cameraDir: 1 | -1 = 1;
+  private cameraScroll = 0;
 
   constructor() {
     super('Level');
@@ -201,6 +210,7 @@ export class LevelScene extends Phaser.Scene {
     this.slowMo = new SlowMo();
     this.catching = null;
     this.nearMisses = new Map();
+    this.cameraDir = 1;
     this.respawnSpot = level.spawn;
     // `?at=COLUMN` (testing): drop in from the sky partway through the level.
     if (START_COLUMN !== null) this.respawnSpot = { x: (START_COLUMN + 0.5) * TILE, y: 3 * TILE };
@@ -445,7 +455,7 @@ export class LevelScene extends Phaser.Scene {
     this.collectCarrots();
     // Under the title the camera holds still, zoomed in on the rabbit.
     if (this.intro) return;
-    this.updateCamera();
+    this.updateCamera(realDt);
     this.updateEnemies(dt);
 
     const pile = this.pileUnderfoot();
@@ -480,10 +490,13 @@ export class LevelScene extends Phaser.Scene {
   }
 
   /**
-   * Up top: follow the rabbit to the right only, and don't let it walk back
-   * off screen. In a burrow: keep it in view.
+   * Up top: follow the rabbit both ways. Running right it sits 40% of the way
+   * across (more room to see what's coming); running back left it sits at
+   * 60% (more room to see behind), and the camera slides smoothly between the
+   * two. It goes by which way the rabbit is running, not facing, so turning
+   * around for a quick poop doesn't swing the view. In a burrow: keep it in view.
    */
-  private updateCamera(): void {
+  private updateCamera(dt = 1 / 60): void {
     const cam = this.cameras.main;
     const r = this.rabbit;
     if (this.location !== 'overworld') {
@@ -492,12 +505,19 @@ export class LevelScene extends Phaser.Scene {
       return;
     }
     const maxScroll = this.level.width - GAME_WIDTH;
-    cam.scrollX = Math.round(Phaser.Math.Clamp(r.hitbox.x - CAMERA_LEAD, cam.scrollX, maxScroll));
-    const body = r.body;
-    if (body.left < cam.scrollX) {
-      body.position.x = cam.scrollX;
-      body.velocity.x = Math.max(0, body.velocity.x);
+    const x = r.hitbox.x;
+    // Moved by something else (a respawn, a burrow exit, the title zoom): carry on from there.
+    if (Math.abs(cam.scrollX - Math.round(this.cameraScroll)) > 1) {
+      this.cameraScroll = cam.scrollX;
+      this.cameraDir = 1;
     }
+    const vx = r.body.velocity.x;
+    if (Math.abs(vx) > 60) this.cameraDir = vx > 0 ? 1 : -1;
+    const want = x - (this.cameraDir > 0 ? CAMERA_LEAD : CAMERA_BACK_LEAD);
+    let scroll = this.cameraScroll + (want - this.cameraScroll) * (1 - Math.exp(-CAMERA_EASE * dt));
+    scroll = Phaser.Math.Clamp(scroll, x - (GAME_WIDTH - CAMERA_EDGE), x - CAMERA_EDGE);
+    this.cameraScroll = Phaser.Math.Clamp(scroll, 0, maxScroll);
+    cam.scrollX = Math.round(this.cameraScroll);
   }
 
   private isLeopard(e: Enemy): boolean {
