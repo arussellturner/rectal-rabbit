@@ -34,6 +34,8 @@ export class HudScene extends Phaser.Scene {
   private controlsKey = '';
   private shownAmmo = 0;
   private bombWasReady = false;
+  /** Hearts drawn last (only redrawn when it changes). */
+  private shownLives = -1;
 
   constructor() {
     super('Hud');
@@ -91,6 +93,7 @@ export class HudScene extends Phaser.Scene {
     this.shownAmmo = this.level.rabbit.ammo.count;
     this.refreshSlots();
     this.controlsKey = '';
+    this.shownLives = -1;
 
     const levelEvents = this.level.events;
     levelEvents.on(LEVEL_EVENTS.EMPTY_SHOT, this.onEmptyShot, this);
@@ -110,7 +113,10 @@ export class HudScene extends Phaser.Scene {
     const ammo = level.rabbit.ammo.count;
     if (ammo !== this.shownAmmo) this.onAmmoChanged(ammo);
 
-    this.hearts.forEach((h, i) => h.setTexture(i < level.lives ? 'heart' : 'heart-empty'));
+    if (level.lives !== this.shownLives) {
+      this.shownLives = level.lives;
+      this.hearts.forEach((h, i) => h.setTexture(i < level.lives ? 'heart' : 'heart-empty'));
+    }
     this.carrotText.setText(`x ${level.carrots}`);
 
     const k = prompts();

@@ -129,9 +129,11 @@ export interface CatchTuning {
 }
 
 export const DEFAULT_CATCH_TUNING: Readonly<CatchTuning> = {
+  // No slow motion or zoom on a catch: it felt like the game was lagging.
+  // (Marshall's original: 0.25 speed for 0.4 s, zoomed to 1.25.)
   catchSlowMo: 0.25,
-  catchSlowMoTime: 0.4,
-  catchZoom: 1.25,
+  catchSlowMoTime: 0,
+  catchZoom: 1,
   nearMissDistance: 16,
   nearMissCooldown: 1.5,
   nearMissSlowMo: 0.5,

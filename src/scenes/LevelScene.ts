@@ -159,6 +159,8 @@ export class LevelScene extends Phaser.Scene {
   private smoke!: Phaser.GameObjects.Particles.ParticleEmitter;
   private weather!: Phaser.GameObjects.Particles.ParticleEmitter;
   private hint!: Phaser.GameObjects.Text;
+  /** Reused pop-up words (see floatText). */
+  private floatPool: Phaser.GameObjects.Text[] = [];
   private lastProgress = 0;
   /** Sitting under the title screen, zoomed in, waiting for start. */
   private intro = false;
@@ -365,6 +367,10 @@ export class LevelScene extends Phaser.Scene {
     const hs = heartSpot(level, TILE);
     if (hs) this.heartPickup = new HeartPickup(this, hs.x, hs.y);
 
+    // Ready-made pop-up words, so the first SPLAT! or CHOMP! doesn't have to build one.
+    this.floatPool = Array.from({ length: 10 }, () =>
+      this.add.text(0, 0, '', textStyle(16)).setOrigin(0.5).setDepth(21).setVisible(false).setData('style', `16#ffffff`),
+    );
     this.hint = this.add.text(0, 0, '', textStyle(16)).setOrigin(0.5, 1).setDepth(20).setVisible(false);
 
     const cam = this.cameras.main;
@@ -789,8 +795,10 @@ export class LevelScene extends Phaser.Scene {
     this.catching = { by, left: CATCH_TUNING.catchSlowMoTime };
     // A catch is never also a near miss.
     for (const n of this.nearMisses.values()) n.reset();
-    this.slowMo.start(CATCH_TUNING.catchSlowMo, CATCH_TUNING.catchSlowMoTime);
-    this.cameras.main.zoomTo(CATCH_TUNING.catchZoom, 120, 'Cubic.easeOut', true);
+    if (CATCH_TUNING.catchSlowMoTime > 0) {
+      this.slowMo.start(CATCH_TUNING.catchSlowMo, CATCH_TUNING.catchSlowMoTime);
+      this.cameras.main.zoomTo(CATCH_TUNING.catchZoom, 120, 'Cubic.easeOut', true);
+    }
     by.caughtRabbit();
     this.floatText(by.hitbox.x, by.body.top - 40, 'CHOMP!', '#f83800', 20);
     input.rumble(120, 0.4, 0.2);
@@ -802,7 +810,7 @@ export class LevelScene extends Phaser.Scene {
     this.catching = null;
     this.slowMo.stop();
     this.applyTimeScale(1);
-    this.cameras.main.zoomTo(1, 250, 'Cubic.easeInOut', true);
+    if (this.cameras.main.zoom !== 1) this.cameras.main.zoomTo(1, 250, 'Cubic.easeInOut', true);
     for (const n of this.nearMisses.values()) n.reset();
     this.cameras.main.shake(200, 0.008);
     this.cameras.main.flash(200, 248, 56, 0);
@@ -1058,9 +1066,27 @@ export class LevelScene extends Phaser.Scene {
     if (text) this.hint.setText(text).setAlpha(alpha).setPosition(r.hitbox.x, r.body.top - 40);
   }
 
+  /**
+   * Words that pop up and float away (SPLAT!, CHOMP!, +1 POOP...). The text
+   * objects are reused: making a new one each time (a fresh canvas and GPU
+   * texture) caused little hitches when a lot happened at once.
+   */
   private floatText(x: number, y: number, text: string, color: string, size = 16): void {
-    const t = this.add.text(x, y, text, textStyle(size, color)).setOrigin(0.5).setDepth(21);
-    this.tweens.add({ targets: t, y: y - 40, alpha: 0, duration: 900, ease: 'Cubic.Out', onComplete: () => t.destroy() });
+    let t = this.floatPool.find((f) => !f.visible);
+    if (!t) {
+      t = this.add.text(0, 0, '', textStyle(size, color)).setOrigin(0.5).setDepth(21);
+      this.floatPool.push(t);
+    }
+    const style = `${size}${color}`;
+    if (t.getData('style') !== style) {
+      t.setStyle(textStyle(size, color));
+      t.setData('style', style);
+    }
+    if (t.text !== text) t.setText(text);
+    t.setPosition(x, y).setAlpha(1).setVisible(true);
+    this.tweens.killTweensOf(t);
+    const ft = t;
+    this.tweens.add({ targets: ft, y: y - 40, alpha: 0, duration: 900, ease: 'Cubic.Out', onComplete: () => ft.setVisible(false) });
   }
 
   // --- Building the level ----------------------------------------------------

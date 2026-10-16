@@ -96,7 +96,18 @@ export class PadConfig {
     }
   }
 
+  /** profile() is asked for many times a frame (input, every on-screen prompt): build each one once. */
+  private cache = new Map<string, PadProfile>();
+
   profile(padId: string): PadProfile {
+    const cached = this.cache.get(padId);
+    if (cached) return cached;
+    const built = this.buildProfile(padId);
+    this.cache.set(padId, built);
+    return built;
+  }
+
+  private buildProfile(padId: string): PadProfile {
     const saved = this.profiles[padId];
     const fresh = defaultProfile();
     if (!saved) return fresh;
@@ -156,6 +167,7 @@ export class PadConfig {
 
   private save(padId: string, profile: PadProfile): void {
     this.profiles[padId] = profile;
+    this.cache.delete(padId);
     try {
       this.store?.setItem(STORAGE_KEY, JSON.stringify(this.profiles));
     } catch {
