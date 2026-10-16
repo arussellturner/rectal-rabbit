@@ -156,6 +156,7 @@ export class TitleScene extends Phaser.Scene {
           [k.jump, 'JUMP', 'jump'],
           [k.eat, 'EAT/DIG', 'eat'],
           [k.shoot, 'POOP', 'shoot'],
+          [k.vomit, 'VOMIT', 'vomit'],
           [k.bomb, 'BOMB', 'dropBomb'],
           [k.splode, 'SPLOSION', 'splode'],
           [k.pause, 'PAUSE', 'pause'],

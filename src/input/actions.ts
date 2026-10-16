@@ -3,7 +3,7 @@
  * "is `jump` pressed?" -- never "is Space / button 0 pressed?" -- so keyboard,
  * PS5, Xbox and Switch controllers all work the same way.
  */
-export const ACTIONS = ['jump', 'eat', 'shoot', 'dropBomb', 'splode', 'pause', 'confirm', 'settings'] as const;
+export const ACTIONS = ['jump', 'eat', 'shoot', 'vomit', 'dropBomb', 'splode', 'pause', 'confirm', 'settings'] as const;
 export type Action = (typeof ACTIONS)[number];
 
 /** One input device's view of the world for a single frame. */

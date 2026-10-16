@@ -12,6 +12,8 @@ export interface Prompts {
   /** Eat grass, or dig on a dirt pile. */
   eat: string;
   shoot: string;
+  /** Vomit out the front. */
+  vomit: string;
   bomb: string;
   /** The poop-splosion. */
   splode: string;
@@ -40,6 +42,7 @@ export function prompts(): Prompts {
       jump: padButtonName('jump'),
       eat: padButtonName('eat'),
       shoot: padButtonName('shoot'),
+      vomit: padButtonName('vomit'),
       bomb: padButtonName('dropBomb'),
       splode: padButtonName('splode'),
       pause: padButtonName('pause'),
@@ -55,6 +58,7 @@ export function prompts(): Prompts {
       jump: 'JUMP',
       eat: 'EAT',
       shoot: 'POOP',
+      vomit: 'VOMIT',
       bomb: 'BOMB',
       splode: 'BOOM',
       pause: 'II',
@@ -66,8 +70,9 @@ export function prompts(): Prompts {
     down: 'DOWN',
     up: 'UP',
     jump: 'SPACE/UP',
-    eat: 'F/DOWN',
+    eat: 'DOWN',
     shoot: 'D',
+    vomit: 'F',
     bomb: 'S',
     splode: 'A',
     pause: 'P',

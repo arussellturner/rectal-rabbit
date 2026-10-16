@@ -2,10 +2,12 @@ import type { Action } from './actions';
 
 /** Keyboard bindings, using `KeyboardEvent.code` (layout-independent). */
 export const KEY_BINDINGS: Record<Action, readonly string[]> = {
-  // Up jumps too, and Down eats / digs too (they still aim lobs and drop through logs).
+  // Up jumps too (it still aims lobs). Down eats and digs (and drops through logs with jump).
   jump: ['Space', 'ArrowUp'],
-  eat: ['KeyF', 'ArrowDown'],
+  eat: ['ArrowDown'],
   shoot: ['KeyD'],
+  // Spew green vomit out the front.
+  vomit: ['KeyF'],
   dropBomb: ['KeyS'],
   // The poop-splosion: poop flies out every way, and a shield for a second.
   splode: ['KeyA'],
@@ -15,7 +17,7 @@ export const KEY_BINDINGS: Record<Action, readonly string[]> = {
   settings: ['KeyC'],
 };
 
-/** Arrows only: A, S and D are poop-splosion, bomb and poop, so no WASD. */
+/** Arrows only: A, S, D and F are poop-splosion, bomb, poop and vomit, so no WASD. */
 export const MOVE_KEYS = {
   left: ['ArrowLeft'],
   right: ['ArrowRight'],

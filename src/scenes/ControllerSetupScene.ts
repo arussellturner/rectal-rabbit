@@ -18,6 +18,7 @@ const ACTION_NAMES: Record<Bindable, string> = {
   jump: 'JUMP',
   eat: 'EAT / DIG',
   shoot: 'POOP',
+  vomit: 'VOMIT',
   dropBomb: 'POOP BOMB',
   splode: 'POOP-SPLOSION',
   pause: 'PAUSE + HELP',
@@ -33,7 +34,7 @@ const ROWS: Row[] = [
 ];
 
 const ROW_Y = 214;
-const ROW_H = 46;
+const ROW_H = 42;
 const LEFT = 250;
 const VALUE_X = 640;
 /** Seconds to wait for a button before giving up. */

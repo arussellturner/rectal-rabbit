@@ -98,6 +98,10 @@ fall in are gone.
   a snow leopard runs into it, it explodes: that leopard goes up in flames, and
   poop sprays everywhere, hitting any other leopards nearby. Up to 3 bombs at a
   time; they fizzle out after a while.
+- **Vomit:** press **F** (RT / R2 on a controller, **VOMIT** on a phone) to
+  spew green vomit out the **front**. It costs just **1 poop** and does one
+  hit to every predator it reaches (about 4 tiles), so it's the quick answer
+  to a stoat or fox coming at you head-on.
 - **Poop-splosion:** press **A** (Y / △ on a controller, **POOP BOOM** on a
   phone) to use **5 poops** at once: poop flies out from the rabbit in every
   direction, and a see-through brown **shield bubble** keeps predators from
@@ -126,7 +130,7 @@ always shows the main ones.
 ### Playing on a phone or tablet
 
 Open the game on your phone and on-screen controls appear: a d-pad on the
-left, **JUMP**, **EAT/DIG**, **POOP**, **BOMB** and **POOP BOOM** on the right, and pause
+left, **JUMP**, **EAT/DIG**, **POOP**, **VOMIT**, **BOMB** and **POOP BOOM** on the right, and pause
 (**II**) in the corner. Turn the phone sideways for the biggest view; held
 upright, the game sits at the top with the buttons underneath. Tap the screen
 to start, and tap the arrows by the level name to pick a level. Add the page
@@ -153,9 +157,10 @@ screen or the pause screen. Then:
 | Move | ← → | D-pad | Left stick / D-pad | Left stick / D-pad |
 | Jump (hold for higher) | Space or ↑ | JUMP | A | ✕ |
 | Drop through a log bridge | ↓ + Space | ↓ + JUMP | ↓ + A | ↓ + ✕ |
-| Eat (hold, on grass) | F or ↓ | EAT/DIG or ↓ | X or ↓ | □ or ↓ |
-| Dig (on a dirt pile) | F or ↓ | ↓ or EAT/DIG | ↓ or X | ↓ or □ |
-| Poop (out the back) | D | POOP | RB / RT | R1 / R2 |
+| Eat (hold, on grass) | ↓ | EAT/DIG or ↓ | X or ↓ | □ or ↓ |
+| Dig (on a dirt pile) | ↓ | ↓ or EAT/DIG | ↓ or X | ↓ or □ |
+| Poop (out the back) | D | POOP | RB | R1 |
+| Vomit (out the front, costs 1) | F | VOMIT | RT | R2 |
 | …high lob | hold ↑ + D | ↑ + POOP | stick ↑ + RB | stick ↑ + R1 |
 | …drop straight down | in the air, ↓ + D | in the air, ↓ + POOP | in the air, ↓ + RB | in the air, ↓ + R1 |
 | Poop bomb (costs 5) | S | BOMB | B or LB | ○ or L1 |

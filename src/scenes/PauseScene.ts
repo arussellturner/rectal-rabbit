@@ -1,7 +1,7 @@
 import Phaser from 'phaser';
 import { GAME_HEIGHT, GAME_WIDTH } from '../config';
 import { BOMB_COST } from '../entities/PoopBomb';
-import { SPLODE_COST } from '../entities/Rabbit';
+import { SPLODE_COST, VOMIT_COST } from '../entities/Rabbit';
 import { input } from '../input/InputManager';
 import { ButtonChip } from './buttonChips';
 import { prompts } from './prompts';
@@ -65,6 +65,7 @@ export class PauseScene extends Phaser.Scene {
       [k.eat.includes('DOWN') ? k.eat : `${k.down} / ${k.eat}`, 'ON A DIRT PILE: DIG INTO A BURROW'],
       [k.shoot, 'POOP OUT THE BACK AT LEOPARDS'],
       [`${k.up} + ${k.shoot}`, 'HIGH LOB'],
+      [k.vomit, `VOMIT OUT THE FRONT (COSTS ${VOMIT_COST} POOP)`],
       [k.bomb, `DROP A POOP BOMB (COSTS ${BOMB_COST} POOPS)`],
       [k.splode, `POOP-SPLOSION + SHIELD (COSTS ${SPLODE_COST} POOPS)`],
       [k.pause, 'PAUSE / THIS SCREEN'],

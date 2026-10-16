@@ -12,6 +12,7 @@ const BUTTONS: { action: Action; label: string; className: string }[] = [
   { action: 'jump', label: 'JUMP', className: 'rr-jump' },
   { action: 'eat', label: 'EAT<br>DIG', className: 'rr-eat' },
   { action: 'shoot', label: 'POOP', className: 'rr-poop' },
+  { action: 'vomit', label: 'VOMIT', className: 'rr-vomit' },
   { action: 'dropBomb', label: 'BOMB', className: 'rr-bomb' },
   { action: 'splode', label: 'POOP<br>BOOM', className: 'rr-splode' },
   { action: 'pause', label: 'II', className: 'rr-pause' },
@@ -31,6 +32,7 @@ const CSS = `
 .rr-jump { width: 92px; height: 92px; right: 18px; bottom: 26px; font-size: 13px; }
 .rr-eat  { width: 72px; height: 72px; right: 122px; bottom: 18px; font-size: 10px; }
 .rr-poop { width: 72px; height: 72px; right: 28px; bottom: 132px; }
+.rr-vomit { width: 64px; height: 64px; right: 32px; bottom: 216px; font-size: 10px; }
 .rr-bomb { width: 72px; height: 72px; right: 116px; bottom: 104px; }
 .rr-splode { width: 64px; height: 64px; right: 212px; bottom: 116px; font-size: 9px; }
 .rr-pause { width: 52px; height: 52px; right: 12px; top: 12px; border-radius: 12px; font-size: 14px; }
@@ -56,7 +58,7 @@ const CSS = `
 }
 @media (max-height: 420px) {
   .rr-pad { transform: scale(0.8); transform-origin: bottom left; }
-  .rr-jump, .rr-eat, .rr-poop, .rr-bomb, .rr-splode { transform: scale(0.85); transform-origin: bottom right; }
+  .rr-jump, .rr-eat, .rr-poop, .rr-vomit, .rr-bomb, .rr-splode { transform: scale(0.85); transform-origin: bottom right; }
 }
 `;
 

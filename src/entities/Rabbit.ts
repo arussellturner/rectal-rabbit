@@ -8,6 +8,10 @@ import { poopLaunchVelocity, type PoopAim } from './poopLaunch';
 import { RabbitMotor } from './RabbitMotor';
 import { MAX_AMMO, POOP_TUNING, TUNING } from './tuning';
 
+/** Poops a vomit uses up. */
+export const VOMIT_COST = 1;
+/** Seconds between vomits. */
+const VOMIT_COOLDOWN = 0.4;
 /** Poops a poop-splosion uses up. */
 export const SPLODE_COST = 5;
 /** Seconds the poop-splosion's shield bubble keeps predators off. */
@@ -35,6 +39,8 @@ export interface RabbitEvents {
   bomb: { x: number; y: number } | null;
   /** Pressed the bomb button without enough poops saved up. */
   bombNotReady: boolean;
+  /** Spewed vomit out the front (which way). */
+  vomit: { dir: 1 | -1 } | null;
   /** Set off a poop-splosion here (the rabbit's middle). */
   splode: { x: number; y: number } | null;
   /** Pressed the poop-splosion button without enough poops. */
@@ -77,6 +83,7 @@ export class Rabbit {
   private landTimer = 0;
   private poopTimer = 0;
   private stunTimer = 0;
+  private vomitCooldown = 0;
   /** Was down held last frame (so "too full" only pops up once per press)? */
   private downWasHeld = false;
   /** The see-through brown bubble around the rabbit while the shield is up. */
@@ -132,6 +139,7 @@ export class Rabbit {
       tooFull: false,
       bomb: null,
       bombNotReady: false,
+      vomit: null,
       splode: null,
       splodeNotReady: false,
     };
@@ -156,6 +164,7 @@ export class Rabbit {
       this.updateShooting(dt, events);
       this.updateBomb(events);
       this.updateSplode(events);
+      this.updateVomit(dt, events);
     } else {
       this.eating = false;
     }
@@ -272,6 +281,20 @@ export class Rabbit {
     this.poopTimer = 0.25;
     this.art.play('rabbit-poop', true);
     input.rumble(120, 0.5, 0.3);
+  }
+
+  /** BLEURGH: green vomit out the front. Costs one poop, does one hit. */
+  private updateVomit(dt: number, events: RabbitEvents): void {
+    this.vomitCooldown = Math.max(0, this.vomitCooldown - dt);
+    if (!input.justPressed('vomit') || this.vomitCooldown > 0) return;
+    this.vomitCooldown = VOMIT_COOLDOWN;
+    if (!this.ammo.spend(VOMIT_COST)) {
+      events.emptyShot = true;
+      return;
+    }
+    events.vomit = { dir: this.facing };
+    this.squash(0.85, 1.12);
+    input.rumble(90, 0.3, 0.4);
   }
 
   /** POOP-SPLOSION! Poop flies out every way, and the shield bubble goes up. */

@@ -59,6 +59,8 @@ const SHAKE = {
 };
 /** A knocked-out predator bursts into flames: flame, smoke and a shockwave. */
 const FLAME_COLORS = [0xffffff, 0xfce048, 0xfca044, 0xf83800, 0x881400];
+/** Vomit: how far out the front it reaches (px), how long it keeps spewing (s), and its colors. */
+const VOMIT = { reach: 190, time: 0.3, colors: [0xd8f878, 0xb8f818, 0x58d854, 0x3c8c00] };
 /** Poop pellets thrown out (every way) by a poop-splosion, and how fast. */
 const SPLODE_PELLETS = 16;
 const SPLODE_SPEED = 560;
@@ -149,6 +151,9 @@ export class LevelScene extends Phaser.Scene {
   private poopBits!: Phaser.GameObjects.Particles.ParticleEmitter;
   private dirtBits!: Phaser.GameObjects.Particles.ParticleEmitter;
   private flames!: Phaser.GameObjects.Particles.ParticleEmitter;
+  private vomitBits!: Phaser.GameObjects.Particles.ParticleEmitter;
+  /** Vomit spewing right now: which way, how long it has left, and who it's already hit. */
+  private spew: { dir: 1 | -1; left: number; hit: Set<Enemy> } | null = null;
   private smoke!: Phaser.GameObjects.Particles.ParticleEmitter;
   private weather!: Phaser.GameObjects.Particles.ParticleEmitter;
   private hint!: Phaser.GameObjects.Text;
@@ -210,6 +215,7 @@ export class LevelScene extends Phaser.Scene {
     this.slowMo = new SlowMo();
     this.catching = null;
     this.nearMisses = new Map();
+    this.spew = null;
     this.cameraDir = 1;
     this.respawnSpot = level.spawn;
     // `?at=COLUMN` (testing): drop in from the sky partway through the level.
@@ -322,6 +328,14 @@ export class LevelScene extends Phaser.Scene {
       color: FLAME_COLORS,
       emitting: false,
     }).setDepth(12);
+    this.vomitBits = this.add.particles(0, 0, 'flame-bit', {
+      speed: { min: 380, max: 620 },
+      gravityY: 900,
+      lifespan: { min: 260, max: 420 },
+      scale: { start: 1.6, end: 0.7 },
+      tint: VOMIT.colors,
+      emitting: false,
+    }).setDepth(11);
     this.smoke = this.add.particles(0, 0, 'flame-bit', {
       speed: { min: 20, max: 90 },
       angle: { min: 230, max: 310 },
@@ -457,6 +471,7 @@ export class LevelScene extends Phaser.Scene {
     if (this.intro) return;
     this.updateCamera(realDt);
     this.updateEnemies(dt);
+    this.updateSpew(dt);
 
     const pile = this.pileUnderfoot();
     this.updateHint(underfoot, pile);
@@ -646,13 +661,52 @@ export class LevelScene extends Phaser.Scene {
     const originX = pellet.getData('originX') as number;
     this.pellets.kill(pellet);
     const result = leopard.hit(originX, (pellet.body as Phaser.Physics.Arcade.Body).velocity.x);
-    // A little screen shake on every hit (bigger for the one that knocks it over).
+    this.afterHit(leopard, result, 'SPLAT!');
+  }
+
+  /** A poop or vomit hit landed: a little screen shake, and it bursts into flames if that was the last hit. */
+  private afterHit(enemy: Enemy, result: 'stagger' | 'scared' | null, word: string): void {
     if (result === 'scared') {
-      this.burnUp(leopard);
+      this.burnUp(enemy);
     } else if (result === 'stagger') {
-      this.floatText(leopard.hitbox.x, leopard.body.top - 40, 'SPLAT!', '#ffffff', 16);
+      this.floatText(enemy.hitbox.x, enemy.body.top - 40, word, '#ffffff', 16);
       this.cameras.main.shake(SHAKE.hit.ms, SHAKE.hit.intensity);
       input.rumble(60, 0.3, 0.2);
+    }
+  }
+
+  /**
+   * BLEURGH! Green vomit sprays out the front of the rabbit for a moment.
+   * Every predator it reaches takes one hit (each only once per spew).
+   */
+  private updateSpew(dt: number): void {
+    const spew = this.spew;
+    if (!spew) return;
+    spew.left -= dt;
+    if (spew.left <= 0 || this.mode !== 'play') {
+      this.spew = null;
+      return;
+    }
+    const r = this.rabbit;
+    const mouthX = r.hitbox.x + spew.dir * 22;
+    const mouthY = r.body.top + 14;
+    // Out the front, spreading a little and falling.
+    const angle = spew.dir > 0 ? { min: -25, max: 10 } : { min: 170, max: 205 };
+    this.vomitBits.updateConfig({ angle });
+    this.vomitBits.explode(6, mouthX, mouthY);
+
+    const box: Box = {
+      left: spew.dir > 0 ? r.hitbox.x : r.hitbox.x - VOMIT.reach,
+      right: spew.dir > 0 ? r.hitbox.x + VOMIT.reach : r.hitbox.x,
+      top: r.body.top - 24,
+      bottom: r.body.bottom + 16,
+    };
+    for (const e of this.enemies) {
+      if (e.gone || e.brain.leaving || spew.hit.has(e)) continue;
+      if (boxGap(box, e.body) > 0) continue;
+      spew.hit.add(e);
+      this.vomitBits.explode(10, e.hitbox.x, e.body.center.y);
+      this.afterHit(e, e.hit(r.hitbox.x, spew.dir * 300), 'BLEURGH!');
     }
   }
 
@@ -941,6 +995,10 @@ export class LevelScene extends Phaser.Scene {
       this.bombs.push(new PoopBomb(this, this.bombGroup, e.bomb.x, e.bomb.y));
       this.poopBits.explode(10, e.bomb.x, e.bomb.y - 10);
       this.floatText(r.hitbox.x, r.body.top - 40, 'POOP BOMB!', '#fca044', 16);
+    }
+    if (e.vomit) {
+      this.spew = { dir: e.vomit.dir, left: VOMIT.time, hit: new Set() };
+      this.floatText(r.hitbox.x + e.vomit.dir * 60, r.body.top - 40, 'BLEURGH!', '#b8f818', 16);
     }
     if (e.splode) this.poopSplosion(e.splode.x, e.splode.y);
     if (e.splodeNotReady) {

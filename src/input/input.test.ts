@@ -128,6 +128,9 @@ describe('PadConfig (controller setup)', () => {
     const c = new PadConfig(store);
     expect(c.buttonsFor('pad', 'eat')).toEqual([3]);
     expect(c.buttonsFor('pad', 'splode')).toEqual([6]);
+    // Vomit's default (RT, 7) was poop's spare button: poop keeps RB, vomit gets RT.
+    expect(c.buttonsFor('pad', 'shoot')).toEqual([5]);
+    expect(c.buttonsFor('pad', 'vomit')).toEqual([7]);
   });
 
   it("won't put an action on the d-pad", () => {
