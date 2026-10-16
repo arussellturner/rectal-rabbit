@@ -102,7 +102,7 @@ fall in are gone.
   spew green vomit out the **front**. It costs just **1 poop** and does one
   hit to every predator it reaches (about 4 tiles), so it's the quick answer
   to a stoat or fox coming at you head-on.
-- **Poop-splosion:** press **A** (Y / △ on a controller, **POOP BOOM** on a
+- **Poop-splosion:** press **A** (Y / △ on a controller, **BOOM** on a
   phone) to use **5 poops** at once: poop flies out from the rabbit in every
   direction, and a see-through brown **shield bubble** keeps predators from
   catching you for **1 second**. Great when you're about to be pounced on
@@ -129,7 +129,7 @@ always shows the main ones.
 ### Playing on a phone or tablet
 
 Open the game on your phone and on-screen controls appear: a d-pad on the
-left, **JUMP**, **EAT/DIG**, **POOP**, **VOMIT**, **BOMB** and **POOP BOOM** on the right, and pause
+left, **JUMP**, **EAT/DIG**, **POOP**, **VOMIT**, **BOMB** and **BOOM** on the right (each with a little picture of what it does, laid out to fit any phone), and pause
 (**II**) in the corner. Turn the phone sideways for the biggest view; held
 upright, the game sits at the top with the buttons underneath. Tap the screen
 to start, and tap the arrows by the level name to pick a level. Add the page
@@ -163,7 +163,7 @@ screen or the pause screen. Then:
 | …high lob | hold ↑ + D | ↑ + POOP | stick ↑ + RB | stick ↑ + R1 |
 | …drop straight down | in the air, ↓ + D | in the air, ↓ + POOP | in the air, ↓ + RB | in the air, ↓ + R1 |
 | Poop bomb (costs 5) | S | BOMB | B or LB | ○ or L1 |
-| Poop-splosion + shield (costs 5) | A | POOP BOOM | Y or LT | △ or L2 |
+| Poop-splosion + shield (costs 5) | A | BOOM | Y or LT | △ or L2 |
 | Pause + help | P (or Esc) | II (top right) | Start | Options |
 | Controller Setup | C | | Select | Create |
 
