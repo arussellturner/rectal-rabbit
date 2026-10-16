@@ -112,8 +112,7 @@ fall in are gone.
   walk out the **EXIT** tunnel to pop up a little way past the dirt pile.
 - The title screen sits over the level itself, zoomed in on the rabbit.
   Press start and the camera zooms out into the game.
-- When a leopard **catches** you, everything goes into slow motion for a
-  moment ("CHOMP!") before you lose the heart. Get right up to a leopard's
+- When a predator **catches** you: "CHOMP!", a red flash, and you lose a heart. Get right up to a leopard's
   nose and away again and you get a "CLOSE!". It's a little forgiving: in the
   air the rabbit tucks its feet up, and a leopard that's just landed can't
   catch you straight away. Poop hits shove leopards back.
