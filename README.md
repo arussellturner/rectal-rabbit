@@ -83,16 +83,18 @@ fall in are gone.
   or jump over it. Birds cruise overhead and then swoop: jump or run out of
   the way at the last moment, or poop them when they come down low.
 - Poop comes out the back, which is right where the leopards are. Hit one
-  **once** and it stumbles. Hit it **twice** and it falls over, sees stars,
-  and rolls away. Once a leopard's been hit, a health bar over its head shows
+  **once** and it stumbles. Hit it **twice** and it bursts into flames
+  (KA-BOOM!) and is gone. Once a leopard's been hit, a health bar over its head shows
   how many more hits it can take.
 - Each **grass** tuft has 3 bites. Hold Eat on it to chew; every bite is one
   poop. You carry up to 10 (the meter in the top-left). Grass grows back.
+- **Bonus heart:** halfway through every level a heart floats in a bubble.
+  Grab it to get back one heart you've lost (up to 3).
 - **Carrots in bubbles** float around the level: jump into one to pop it for
   +3 poops.
 - **Poop bomb:** once you've saved up **5 poops** (the orange notch on the
   meter), press the bomb button to plop a stinky poop bomb on the ground. When
-  a snow leopard runs into it, it explodes: that leopard gets knocked flat, and
+  a snow leopard runs into it, it explodes: that leopard goes up in flames, and
   poop sprays everywhere, hitting any other leopards nearby. Up to 3 bombs at a
   time; they fizzle out after a while.
 - **Dirt piles:** stand on one and press down (or Eat) to dig into a secret
@@ -246,6 +248,7 @@ src/
 ├── input/                Keyboard + gamepad → actions ("jump", "shoot", …)
 │   └── padConfig.ts      Controller button setup, saved per controller
 ├── level/LevelMap.ts     Turns a text level (and its burrows) into tiles and physics boxes
+├── level/heartSpot.ts    Where the bonus heart goes (halfway, one hop up)
 ├── level/reachability.ts Can the rabbit get there? (used by the tests)
 ├── ai/
 │   ├── ChaserBrain.ts    Predators on foot: chase, jump, pounce, stagger, fall, run away
@@ -258,6 +261,7 @@ src/
 │   ├── healthBar.ts      The 8-bit health bar over a predator's head
 │   ├── RabbitMotor.ts    Movement rules: accel, coyote time, jump buffer…
 │   ├── CarrotPickup.ts   Carrots: in bubbles above ground, loose in burrows
+│   ├── HeartPickup.ts    The bonus heart halfway through each level
 │   ├── PoopBomb.ts       The poop bomb sitting on the ground
 │   ├── Checkpoint.ts     Flagpole
 │   ├── GrassPatch.ts     A tuft of grass that shrinks and regrows

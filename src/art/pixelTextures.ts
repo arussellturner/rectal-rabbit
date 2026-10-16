@@ -155,6 +155,10 @@ export function makeLevelTextures(scene: Phaser.Scene): void {
     { D: PAL.woodDark, L: PAL.wood, G: PAL.greenMid },
   );
   paint(scene, 'stink', 1, 1, (set) => set(0, 0, PAL.greenLight));
+  // A plain white chunk for flames and smoke (tinted by the particle emitter).
+  paint(scene, 'flame-bit', 2, 2, (set) => {
+    for (let i = 0; i < 4; i++) set(i % 2, i >> 1, '#ffffff');
+  });
 
   // --- Pickups and HUD ---
   const heart = ['.KK...KK.', 'KRWRKRRRK', 'KWRRRRRRK', 'KRRRRRRRK', '.KRRRRRK.', '..KRRRK..', '...KRK...', '....K....'];

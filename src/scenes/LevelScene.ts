@@ -10,6 +10,7 @@ import { progress } from '../systems/save';
 import { CarrotPickup } from '../entities/CarrotPickup';
 import { Checkpoint } from '../entities/Checkpoint';
 import { GrassPatch } from '../entities/GrassPatch';
+import { HeartPickup } from '../entities/HeartPickup';
 import { BOMB_COST, MAX_BOMBS, PoopBomb } from '../entities/PoopBomb';
 import { PoopPellets } from '../entities/PoopPellets';
 import { Rabbit, type RabbitEvents } from '../entities/Rabbit';
@@ -17,6 +18,7 @@ import { Chaser } from '../entities/Chaser';
 import { Flyer } from '../entities/Flyer';
 import { CATCH_TUNING, TUNING } from '../entities/tuning';
 import { input } from '../input/InputManager';
+import { heartSpot } from '../level/heartSpot';
 import type { LevelMap, Rect, Spot, World } from '../level/LevelMap';
 import { DEFAULT_SPAWNER, LeopardSpawner } from '../systems/LeopardSpawner';
 import { NearMiss } from '../systems/NearMiss';
@@ -34,6 +36,7 @@ export const LEVEL_EVENTS = {
   EMPTY_SHOT: 'empty-shot',
   BOMB_NOT_READY: 'bomb-not-ready',
   LIFE_LOST: 'life-lost',
+  LIFE_GAINED: 'life-gained',
 } as const;
 
 export const START_LIVES = 3;
@@ -48,6 +51,8 @@ const SHAKE = {
   hit: { ms: 130, intensity: 0.005 },
   scared: { ms: 220, intensity: 0.009 },
 };
+/** A knocked-out predator bursts into flames: flame, smoke and a shockwave. */
+const FLAME_COLORS = [0xffffff, 0xfce048, 0xfca044, 0xf83800, 0x881400];
 /** Poop pellets thrown out by a poop bomb. */
 const SHRAPNEL = 18;
 /**
@@ -113,6 +118,8 @@ export class LevelScene extends Phaser.Scene {
   private burrows: Burrow[] = [];
   private grass: GrassPatch[] = [];
   private carrotPickups: CarrotPickup[] = [];
+  /** The bonus heart halfway through the level. */
+  private heartPickup: HeartPickup | null = null;
   private checkpoints: Checkpoint[] = [];
   private respawnSpot!: Spot;
   private pellets!: PoopPellets;
@@ -132,6 +139,8 @@ export class LevelScene extends Phaser.Scene {
   private grassBits!: Phaser.GameObjects.Particles.ParticleEmitter;
   private poopBits!: Phaser.GameObjects.Particles.ParticleEmitter;
   private dirtBits!: Phaser.GameObjects.Particles.ParticleEmitter;
+  private flames!: Phaser.GameObjects.Particles.ParticleEmitter;
+  private smoke!: Phaser.GameObjects.Particles.ParticleEmitter;
   private weather!: Phaser.GameObjects.Particles.ParticleEmitter;
   private hint!: Phaser.GameObjects.Text;
   private lastProgress = 0;
@@ -184,6 +193,7 @@ export class LevelScene extends Phaser.Scene {
     this.bombs = [];
     this.grass = [];
     this.carrotPickups = [];
+    this.heartPickup = null;
     this.lastProgress = 0;
     this.slowMo = new SlowMo();
     this.catching = null;
@@ -246,7 +256,7 @@ export class LevelScene extends Phaser.Scene {
     this.physics.add.overlap(this.leopardGroup, this.bombGroup, (h, b) => {
       const enemy = (h as Phaser.GameObjects.Zone).getData('enemy') as Enemy | undefined;
       const bomb = (b as Phaser.GameObjects.Image).getData('bomb') as PoopBomb | undefined;
-      if (enemy && bomb && !bomb.done && !enemy.brain.leaving) this.explode(bomb, enemy);
+      if (enemy && bomb && !bomb.done && !enemy.gone && !enemy.brain.leaving) this.explode(bomb, enemy);
     });
     // Birds fly through walls and over bombs; only poop can reach them.
     this.flyerGroup = this.physics.add.group({ allowGravity: false });
@@ -289,6 +299,30 @@ export class LevelScene extends Phaser.Scene {
       tint: [0x88581c, 0xac7c3c, 0x5c3a10],
       emitting: false,
     }).setDepth(11);
+
+    this.flames = this.add.particles(0, 0, 'flame-bit', {
+      speed: { min: 40, max: 300 },
+      angle: { min: 190, max: 350 },
+      gravityY: -420,
+      lifespan: { min: 450, max: 950 },
+      scale: { start: 3, end: 0.4 },
+      color: FLAME_COLORS,
+      emitting: false,
+    }).setDepth(12);
+    this.smoke = this.add.particles(0, 0, 'flame-bit', {
+      speed: { min: 20, max: 90 },
+      angle: { min: 230, max: 310 },
+      gravityY: -160,
+      lifespan: { min: 700, max: 1100 },
+      scale: { start: 2, end: 4.5 },
+      alpha: { start: 0.75, end: 0 },
+      tint: [0x3c3c3c, 0x5c5c5c, 0x7c7c7c],
+      emitting: false,
+    }).setDepth(11);
+
+    // The bonus heart, about halfway along.
+    const hs = heartSpot(level, TILE);
+    if (hs) this.heartPickup = new HeartPickup(this, hs.x, hs.y);
 
     this.hint = this.add.text(0, 0, '', textStyle(16)).setOrigin(0.5, 1).setDepth(20).setVisible(false);
 
@@ -480,6 +514,7 @@ export class LevelScene extends Phaser.Scene {
     }
 
     for (const enemy of this.enemies) {
+      if (enemy.gone) continue;
       if (enemy.kind === 'flyer') {
         enemy.update(dt, target, this.level.height, cam);
       } else {
@@ -583,20 +618,48 @@ export class LevelScene extends Phaser.Scene {
     const pellet = p as Phaser.Physics.Arcade.Image;
     const leopard = (h as Phaser.GameObjects.Zone).getData('enemy') as Enemy | undefined;
     // Leopards already knocked over let poop fly right past (so bomb poop can reach the others).
-    if (!leopard || leopard.brain.leaving || !this.pellets.isFlying(pellet)) return;
+    if (!leopard || leopard.gone || leopard.brain.leaving || !this.pellets.isFlying(pellet)) return;
     this.poopBits.explode(12, pellet.x, pellet.y);
     const originX = pellet.getData('originX') as number;
     this.pellets.kill(pellet);
     const result = leopard.hit(originX, (pellet.body as Phaser.Physics.Arcade.Body).velocity.x);
     // A little screen shake on every hit (bigger for the one that knocks it over).
     if (result === 'scared') {
-      this.floatText(leopard.hitbox.x, leopard.body.top - 40, 'SCARED OFF!', '#fce0a8', 16);
-      this.cameras.main.shake(SHAKE.scared.ms, SHAKE.scared.intensity);
-      input.rumble(120, 0.5, 0.4);
+      this.burnUp(leopard);
     } else if (result === 'stagger') {
       this.floatText(leopard.hitbox.x, leopard.body.top - 40, 'SPLAT!', '#ffffff', 16);
       this.cameras.main.shake(SHAKE.hit.ms, SHAKE.hit.intensity);
       input.rumble(60, 0.3, 0.2);
+    }
+  }
+
+  /**
+   * Knocked out: the predator bursts into flames and is gone (instead of
+   * running off). `loud`: its own text and screen shake (a bomb has its own).
+   */
+  private burnUp(enemy: Enemy, loud = true): void {
+    if (enemy.gone) return;
+    enemy.gone = true;
+    const b = enemy.body;
+    const x = b.center.x;
+    const y = b.center.y;
+    enemy.art.setVisible(false);
+    // A few bursts spread over its body, so the whole animal goes up.
+    // Burns for a moment: a big burst, then flames keep licking up.
+    for (let i = 0; i < 7; i++) {
+      this.time.delayedCall(i * 55, () => {
+        this.flames.explode(i === 0 ? 40 : 16, x + Phaser.Math.Between(-b.width / 2, b.width / 2), y + Phaser.Math.Between(-b.height / 2, b.height / 2));
+      });
+    }
+    this.time.delayedCall(150, () => this.smoke.explode(18, x, y - 10));
+    const flash = this.add.circle(x, y, 18, 0xfca044, 0.9).setDepth(12);
+    this.tweens.add({ targets: flash, scale: 6, alpha: 0, duration: 320, ease: 'Cubic.Out', onComplete: () => flash.destroy() });
+    const core = this.add.circle(x, y, 14, 0xfff4a0, 1).setDepth(13);
+    this.tweens.add({ targets: core, scale: 3, alpha: 0, duration: 200, ease: 'Quad.Out', onComplete: () => core.destroy() });
+    if (loud) {
+      this.floatText(x, b.top - 40, 'KA-BOOM!', '#fca044', 20);
+      this.cameras.main.shake(SHAKE.scared.ms, SHAKE.scared.intensity);
+      input.rumble(160, 0.6, 0.5);
     }
   }
 
@@ -605,7 +668,7 @@ export class LevelScene extends Phaser.Scene {
     const x = bomb.x;
     const y = bomb.y - 18;
     bomb.detonate();
-    by?.blast(x);
+    if (by?.blast(x)) this.burnUp(by, false);
 
     for (let i = 0; i < SHRAPNEL; i++) {
       // Fan out over the top half, from flat-left round to flat-right.
@@ -719,8 +782,8 @@ export class LevelScene extends Phaser.Scene {
     r.controlsLocked = true;
     r.freezeArt = true;
     r.invulnerableTimer = 999;
-    // Every leopard gives up and rolls away.
-    for (const l of this.enemies) l.blast(r.hitbox.x);
+    // Every predator still around goes up in flames.
+    for (const e of this.enemies) if (!e.gone) this.burnUp(e, false);
     this.tweens.add({
       targets: r.art,
       alpha: 0,
@@ -809,6 +872,15 @@ export class LevelScene extends Phaser.Scene {
 
   private collectCarrots(): void {
     const r = this.rabbit;
+    const heart = this.heartPickup;
+    if (heart?.touches(r.hitbox.x, r.body.top, r.body.bottom)) {
+      heart.collect();
+      const healed = this.lives < START_LIVES;
+      if (healed) this.lives++;
+      this.events.emit(LEVEL_EVENTS.LIFE_GAINED);
+      this.floatText(heart.x, heart.y - 40, healed ? '+1 HEART!' : 'HEARTS FULL!', '#f83800', healed ? 24 : 16);
+      input.rumble(120, 0.3, 0.5);
+    }
     for (const c of this.carrotPickups) {
       if (!c.touches(r.hitbox.x, r.body.top, r.body.bottom)) continue;
       c.collect();

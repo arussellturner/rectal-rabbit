@@ -3,6 +3,7 @@ import { TILE } from '../config';
 import { LEVELS } from '../data/levels';
 import { SPECIALS } from '../data/specials';
 import { buildWorld, burrow, joinScreens, mergeRuns, parseLevel, type LevelMap } from './LevelMap';
+import { heartSpot } from './heartSpot';
 import { canReach, isSpot, reachableSpots, spotOf } from './reachability';
 
 describe('parseLevel', () => {
@@ -166,6 +167,21 @@ describe.each(LEVELS.map((l) => [l.name, l] as const))('level: %s', (_name, def)
     expect(canReach(reach, spotOf(level.home!, TILE)), 'home is reachable').toBe(true);
     for (const cp of level.checkpoints) expect(canReach(reach, spotOf(cp, TILE)), 'checkpoint reachable').toBe(true);
     level.dirtPiles.forEach((p, i) => expect(canReach(reach, spotOf(p, TILE)), `dirt pile ${i + 1} reachable`).toBe(true));
+  });
+
+  it('has a bonus heart about halfway along, one hop up from the ground you can reach', () => {
+    const heart = heartSpot(level, TILE);
+    expect(heart).not.toBeNull();
+    const homeX = level.home!.x;
+    const along = (heart!.x - level.spawn.x) / (homeX - level.spawn.x);
+    expect(along).toBeGreaterThan(0.4);
+    expect(along).toBeLessThan(0.6);
+    const below = { col: Math.floor(heart!.x / TILE), row: Math.floor(heart!.y / TILE) + 1 };
+    const reach = reachableSpots(level, spotOf(level.spawn, TILE));
+    level.dirtPiles.forEach((pile, i) => {
+      if (canReach(reach, spotOf(pile, TILE))) for (const k of reachableSpots(level, spotOf(level.exitHoles[i], TILE))) reach.add(k);
+    });
+    expect(canReach(reach, below), 'the ground under the heart is reachable').toBe(true);
   });
 
   it('pops you out of each burrow a little way past its dirt pile', () => {

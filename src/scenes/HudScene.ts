@@ -96,10 +96,12 @@ export class HudScene extends Phaser.Scene {
     levelEvents.on(LEVEL_EVENTS.EMPTY_SHOT, this.onEmptyShot, this);
     levelEvents.on(LEVEL_EVENTS.BOMB_NOT_READY, this.onEmptyShot, this);
     levelEvents.on(LEVEL_EVENTS.LIFE_LOST, this.onLifeLost, this);
+    levelEvents.on(LEVEL_EVENTS.LIFE_GAINED, this.onLifeGained, this);
     this.events.once(Phaser.Scenes.Events.SHUTDOWN, () => {
       levelEvents.off(LEVEL_EVENTS.EMPTY_SHOT, this.onEmptyShot, this);
       levelEvents.off(LEVEL_EVENTS.BOMB_NOT_READY, this.onEmptyShot, this);
       levelEvents.off(LEVEL_EVENTS.LIFE_LOST, this.onLifeLost, this);
+      levelEvents.off(LEVEL_EVENTS.LIFE_GAINED, this.onLifeGained, this);
     });
   }
 
@@ -181,6 +183,14 @@ export class HudScene extends Phaser.Scene {
     if (!heart) return;
     heart.setScale(1.8);
     this.tweens.add({ targets: heart, scale: 1, duration: 300, ease: 'Back.Out' });
+  }
+
+  /** The heart just filled back in pops up big. */
+  private onLifeGained(): void {
+    const heart = this.hearts[this.level.lives - 1];
+    if (!heart) return;
+    heart.setScale(2.2);
+    this.tweens.add({ targets: heart, scale: 1, duration: 450, ease: 'Back.Out' });
   }
 
   private onEmptyShot(): void {
