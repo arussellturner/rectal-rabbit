@@ -13,7 +13,7 @@ import { GrassPatch } from '../entities/GrassPatch';
 import { HeartPickup } from '../entities/HeartPickup';
 import { BOMB_COST, MAX_BOMBS, PoopBomb } from '../entities/PoopBomb';
 import { PoopPellets } from '../entities/PoopPellets';
-import { Rabbit, type RabbitEvents } from '../entities/Rabbit';
+import { Rabbit, SPLODE_COST, type RabbitEvents } from '../entities/Rabbit';
 import { Chaser } from '../entities/Chaser';
 import { Flyer } from '../entities/Flyer';
 import { CATCH_TUNING, TUNING } from '../entities/tuning';
@@ -53,6 +53,9 @@ const SHAKE = {
 };
 /** A knocked-out predator bursts into flames: flame, smoke and a shockwave. */
 const FLAME_COLORS = [0xffffff, 0xfce048, 0xfca044, 0xf83800, 0x881400];
+/** Poop pellets thrown out (every way) by a poop-splosion, and how fast. */
+const SPLODE_PELLETS = 16;
+const SPLODE_SPEED = 560;
 /** Poop pellets thrown out by a poop bomb. */
 const SHRAPNEL = 18;
 /**
@@ -919,10 +922,31 @@ export class LevelScene extends Phaser.Scene {
       this.poopBits.explode(10, e.bomb.x, e.bomb.y - 10);
       this.floatText(r.hitbox.x, r.body.top - 40, 'POOP BOMB!', '#fca044', 16);
     }
+    if (e.splode) this.poopSplosion(e.splode.x, e.splode.y);
+    if (e.splodeNotReady) {
+      this.floatText(r.hitbox.x, r.body.top - 40, `SPLOSION NEEDS ${SPLODE_COST} POOPS`, '#fcbcb0', 16);
+      this.events.emit(LEVEL_EVENTS.BOMB_NOT_READY);
+    }
     if (e.bombNotReady) {
       this.floatText(r.hitbox.x, r.body.top - 40, `BOMB NEEDS ${BOMB_COST} POOPS`, '#fcbcb0', 16);
       this.events.emit(LEVEL_EVENTS.BOMB_NOT_READY);
     }
+  }
+
+  /** POOP-SPLOSION: poop pellets fly out from the rabbit in every direction. */
+  private poopSplosion(x: number, y: number): void {
+    for (let i = 0; i < SPLODE_PELLETS; i++) {
+      const a = (Math.PI * 2 * i) / SPLODE_PELLETS;
+      const speed = SPLODE_SPEED * (i % 2 === 0 ? 1 : 0.8);
+      this.pellets.fire(x + Math.cos(a) * 12, y + Math.sin(a) * 12, Math.cos(a) * speed, Math.sin(a) * speed - 120);
+    }
+    this.poopBits.explode(40, x, y);
+    const ring = this.add.circle(x, y, 16).setStrokeStyle(8, 0x7c5428).setDepth(12);
+    this.tweens.add({ targets: ring, scale: 8, alpha: 0, duration: 380, ease: 'Cubic.Out', onComplete: () => ring.destroy() });
+    this.cameras.main.shake(220, 0.01);
+    const cam = this.cameras.main;
+    // Keep the words on screen even right at the edge.
+    this.floatText(Phaser.Math.Clamp(x, cam.scrollX + 200, cam.scrollX + GAME_WIDTH - 200), y - 70, 'POOP-SPLOSION!', '#fca044', 24);
   }
 
   /** A hint over the rabbit's head: dig here, or eat here. */

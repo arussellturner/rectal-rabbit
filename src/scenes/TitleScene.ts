@@ -157,6 +157,7 @@ export class TitleScene extends Phaser.Scene {
           [k.eat, 'EAT/DIG', 'eat'],
           [k.shoot, 'POOP', 'shoot'],
           [k.bomb, 'BOMB', 'dropBomb'],
+          [k.splode, 'SPLOSION', 'splode'],
           [k.pause, 'PAUSE', 'pause'],
         ];
         const row = chipRow(this, 0, 495, items.map(([b, l]) => [b, l]), 12, 24);

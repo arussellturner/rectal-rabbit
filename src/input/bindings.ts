@@ -7,13 +7,15 @@ export const KEY_BINDINGS: Record<Action, readonly string[]> = {
   eat: ['KeyF', 'ArrowDown'],
   shoot: ['KeyD'],
   dropBomb: ['KeyS'],
+  // The poop-splosion: poop flies out every way, and a shield for a second.
+  splode: ['KeyA'],
   // Esc still works too (handy for backing out of menus).
   pause: ['KeyP', 'Escape'],
   confirm: ['Enter', 'Space'],
   settings: ['KeyC'],
 };
 
-/** Arrows only: D and S are poop and bomb, so no WASD. */
+/** Arrows only: A, S and D are poop-splosion, bomb and poop, so no WASD. */
 export const MOVE_KEYS = {
   left: ['ArrowLeft'],
   right: ['ArrowRight'],

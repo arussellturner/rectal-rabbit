@@ -2,7 +2,7 @@ import { PAD } from './bindings';
 import type { PadFamily } from './gamepadMath';
 
 /** The game actions you can put on any controller button in Controller Setup. */
-export const BINDABLE = ['jump', 'eat', 'shoot', 'dropBomb', 'pause'] as const;
+export const BINDABLE = ['jump', 'eat', 'shoot', 'dropBomb', 'splode', 'pause'] as const;
 export type Bindable = (typeof BINDABLE)[number];
 
 /** Which letters are printed on the buttons. 'auto' guesses from the controller's name. */
@@ -21,6 +21,8 @@ export const DEFAULT_BINDINGS: Readonly<Record<Bindable, readonly number[]>> = {
   shoot: [PAD.R1, PAD.R2],
   // LB / L1 too: handy on controllers with a spare bumper (like the 8BitDo Ultimate 2C).
   dropBomb: [PAD.EAST, PAD.L1],
+  // Y / triangle, and LT / L2.
+  splode: [PAD.NORTH, PAD.L2],
   pause: [PAD.START],
 };
 
@@ -98,6 +100,12 @@ export class PadConfig {
     if (!saved) return fresh;
     // Fill in anything missing (e.g. an action added in a newer version of the game).
     for (const a of BINDABLE) if (Array.isArray(saved.bindings?.[a])) fresh.bindings[a] = saved.bindings[a];
+    // A new action's default buttons might already be taken by the player's own setup: leave those alone.
+    for (const a of BINDABLE) {
+      if (Array.isArray(saved.bindings?.[a])) continue;
+      const taken = BINDABLE.filter((o) => o !== a && Array.isArray(saved.bindings?.[o])).flatMap((o) => saved.bindings[o]);
+      fresh.bindings[a] = fresh.bindings[a].filter((b) => !taken.includes(b));
+    }
     if (LABEL_STYLES.includes(saved.labels)) fresh.labels = saved.labels;
     return fresh;
   }

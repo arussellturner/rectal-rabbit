@@ -8,6 +8,11 @@ import { poopLaunchVelocity, type PoopAim } from './poopLaunch';
 import { RabbitMotor } from './RabbitMotor';
 import { MAX_AMMO, POOP_TUNING, TUNING } from './tuning';
 
+/** Poops a poop-splosion uses up. */
+export const SPLODE_COST = 5;
+/** Seconds the poop-splosion's shield bubble keeps predators off. */
+export const SHIELD_TIME = 1;
+
 // Fits through a one-tile (48 px) gap.
 const HITBOX_W = 40;
 const HITBOX_H = 44;
@@ -30,6 +35,10 @@ export interface RabbitEvents {
   bomb: { x: number; y: number } | null;
   /** Pressed the bomb button without enough poops saved up. */
   bombNotReady: boolean;
+  /** Set off a poop-splosion here (the rabbit's middle). */
+  splode: { x: number; y: number } | null;
+  /** Pressed the poop-splosion button without enough poops. */
+  splodeNotReady: boolean;
 }
 
 /**
@@ -50,6 +59,8 @@ export class Rabbit {
   dropThroughTimer = 0;
   /** While > 0, predators can't catch you (just respawned). The rabbit blinks. */
   invulnerableTimer = 0;
+  /** While > 0, the poop-splosion's shield bubble is up: predators can't catch you. */
+  shieldTimer = 0;
   /** Ignore the controls (digging, reached home, ...). */
   controlsLocked = false;
   /** Leave the art alone (the level is animating it: digging, going home). */
@@ -66,6 +77,8 @@ export class Rabbit {
   private landTimer = 0;
   private poopTimer = 0;
   private stunTimer = 0;
+  /** The see-through brown bubble around the rabbit while the shield is up. */
+  private readonly shield: Phaser.GameObjects.Arc;
 
   constructor(
     private readonly scene: Phaser.Scene,
@@ -77,14 +90,16 @@ export class Rabbit {
     this.body.setCollideWorldBounds(true);
 
     this.art = scene.add.sprite(x, y, 'rabbit', 0).setOrigin(0.5, 1).setDepth(10).setScale(PIXEL);
+    this.shield = scene.add.circle(x, y, 46, 0x8c5c24, 0.35).setStrokeStyle(4, 0xc89048, 0.85).setDepth(11).setVisible(false);
   }
 
   get body(): Phaser.Physics.Arcade.Body {
     return this.hitbox.body as Phaser.Physics.Arcade.Body;
   }
 
+  /** Can't be caught: just respawned (blinking), or the shield bubble is up. */
   get invulnerable(): boolean {
-    return this.invulnerableTimer > 0;
+    return this.invulnerableTimer > 0 || this.shieldTimer > 0;
   }
 
   /** What predators can see and hear of the rabbit. */
@@ -115,6 +130,8 @@ export class Rabbit {
       tooFull: false,
       bomb: null,
       bombNotReady: false,
+      splode: null,
+      splodeNotReady: false,
     };
     const body = this.body;
     this.onGround = body.blocked.down || body.touching.down;
@@ -130,11 +147,13 @@ export class Rabbit {
     }
     this.dropThroughTimer = Math.max(0, this.dropThroughTimer - dt);
     this.invulnerableTimer = Math.max(0, this.invulnerableTimer - dt);
+    this.shieldTimer = Math.max(0, this.shieldTimer - dt);
 
     if (live) {
       this.updateEating(dt, grass, jumpPressed, events);
       this.updateShooting(dt, events);
       this.updateBomb(events);
+      this.updateSplode(events);
     } else {
       this.eating = false;
     }
@@ -164,6 +183,7 @@ export class Rabbit {
     }
 
     this.updateArt(dt);
+    this.updateShield();
     return events;
   }
 
@@ -177,6 +197,7 @@ export class Rabbit {
   respawn(x: number, y: number, invulnerableFor = 0): void {
     this.body.reset(x, y);
     this.invulnerableTimer = invulnerableFor;
+    this.shieldTimer = 0;
     this.body.setGravityY(0);
     this.dropThroughTimer = 0;
     this.fallSpeed = 0;
@@ -247,6 +268,35 @@ export class Rabbit {
     input.rumble(120, 0.5, 0.3);
   }
 
+  /** POOP-SPLOSION! Poop flies out every way, and the shield bubble goes up. */
+  private updateSplode(events: RabbitEvents): void {
+    if (!input.justPressed('splode')) return;
+    if (!this.ammo.spend(SPLODE_COST)) {
+      events.splodeNotReady = true;
+      return;
+    }
+    events.splode = { x: this.hitbox.x, y: this.body.center.y };
+    this.shieldTimer = SHIELD_TIME;
+    this.squash(1.35, 0.7);
+    this.poopTimer = 0.3;
+    this.art.play('rabbit-poop', true);
+    input.rumble(220, 0.9, 0.6);
+  }
+
+  /** The bubble follows the rabbit, wobbles, and flickers just before it pops. */
+  private updateShield(): void {
+    const on = this.shieldTimer > 0;
+    this.shield.setVisible(on);
+    if (!on) return;
+    const t = SHIELD_TIME - this.shieldTimer;
+    // Puffs up fast, then wobbles gently.
+    const grow = Math.min(1, t / 0.12);
+    const wobble = 1 + Math.sin(t * 22) * 0.04;
+    this.shield.setPosition(this.hitbox.x, this.body.center.y - 2).setScale(grow * wobble);
+    const ending = this.shieldTimer < 0.3 && Math.floor(this.shieldTimer * 20) % 2 === 0;
+    this.shield.setAlpha(ending ? 0.3 : 1);
+  }
+
   private squash(x: number, y: number): void {
     this.squashX = x;
     this.squashY = y;
@@ -286,6 +336,6 @@ export class Rabbit {
       .setPosition(this.hitbox.x, this.body.bottom + PIXEL)
       .setScale(PIXEL * this.squashX, PIXEL * this.squashY)
       .setFlipX(this.facing < 0)
-      .setAlpha(this.invulnerable && Math.floor(this.invulnerableTimer * 12) % 2 === 0 ? 0.3 : 1);
+      .setAlpha(this.invulnerableTimer > 0 && Math.floor(this.invulnerableTimer * 12) % 2 === 0 ? 0.3 : 1);
   }
 }

@@ -19,6 +19,7 @@ const ACTION_NAMES: Record<Bindable, string> = {
   eat: 'EAT / DIG',
   shoot: 'POOP',
   dropBomb: 'POOP BOMB',
+  splode: 'POOP-SPLOSION',
   pause: 'PAUSE + HELP',
 };
 

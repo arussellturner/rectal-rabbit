@@ -119,6 +119,17 @@ describe('PadConfig (controller setup)', () => {
     expect(c.buttonsFor('pad', 'shoot')).toEqual([5]);
   });
 
+  it('gives a newly added action (the poop-splosion) its default buttons, unless the player already uses them', () => {
+    expect(new PadConfig(null).buttonsFor('pad', 'splode')).toEqual([3, 6]);
+    // Saved before the poop-splosion existed, with Y (3) put on eat.
+    const store = memory();
+    const old = { bindings: { jump: [0], eat: [3], shoot: [5, 7], dropBomb: [1, 4], pause: [9] }, labels: 'auto' };
+    store.setItem('rectal-rabbit.controllers', JSON.stringify({ pad: old }));
+    const c = new PadConfig(store);
+    expect(c.buttonsFor('pad', 'eat')).toEqual([3]);
+    expect(c.buttonsFor('pad', 'splode')).toEqual([6]);
+  });
+
   it("won't put an action on the d-pad", () => {
     const c = new PadConfig(null);
     c.bind('pad', 'jump', 13);

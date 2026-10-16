@@ -13,6 +13,8 @@ export interface Prompts {
   eat: string;
   shoot: string;
   bomb: string;
+  /** The poop-splosion. */
+  splode: string;
   pause: string;
   /** Open Controller Setup. */
   settings: string;
@@ -39,6 +41,7 @@ export function prompts(): Prompts {
       eat: padButtonName('eat'),
       shoot: padButtonName('shoot'),
       bomb: padButtonName('dropBomb'),
+      splode: padButtonName('splode'),
       pause: padButtonName('pause'),
       settings: buttonName(8, resolveStyle(padConfig.profile(pad.id).labels, pad.family)),
     };
@@ -53,6 +56,7 @@ export function prompts(): Prompts {
       eat: 'EAT',
       shoot: 'POOP',
       bomb: 'BOMB',
+      splode: 'BOOM',
       pause: 'II',
       settings: '-',
     };
@@ -65,6 +69,7 @@ export function prompts(): Prompts {
     eat: 'F/DOWN',
     shoot: 'D',
     bomb: 'S',
+    splode: 'A',
     pause: 'P',
     settings: 'C',
   };

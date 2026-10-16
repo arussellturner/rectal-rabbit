@@ -159,7 +159,8 @@ export class HudScene extends Phaser.Scene {
       [k.eat, 'EAT / DIG'],
       [k.shoot, 'POOP'],
       [k.bomb, 'BOMB'],
-      [k.pause, 'PAUSE + HELP'],
+      [k.splode, 'SPLOSION'],
+      [k.pause, 'PAUSE'],
     ]);
   }
 
