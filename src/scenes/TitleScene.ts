@@ -177,7 +177,7 @@ export class TitleScene extends Phaser.Scene {
    * (From Marshall's turnerm5/rectal-rabbit.)
    */
   private warmUpTextures(): void {
-    const keys = ['rabbit', 'snow-leopard', 'poop', 'poop-bomb', 'star', 'carrot', 'bubble'];
+    const keys = ['rabbit', 'snow-leopard', 'fox', 'weasel', 'wolf', 'snake', 'hawk', 'poop', 'poop-bomb', 'star', 'carrot', 'bubble'];
     const images = keys
       .filter((k) => this.textures.exists(k))
       // Alpha 0 would be skipped by the renderer; this is drawn but shows nothing.

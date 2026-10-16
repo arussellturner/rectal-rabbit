@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { SNOW_LEOPARD } from '../data/chasers';
+import { FOX, SNAKE, SNOW_LEOPARD } from '../data/chasers';
 import { DEFAULT_SPAWNER, LeopardSpawner } from '../systems/LeopardSpawner';
 import { ChaserBrain, type ChaserSenses } from './ChaserBrain';
 
@@ -35,6 +35,14 @@ describe('ChaserBrain', () => {
     expect(later.update(senses({ gapAhead: true }), DT).jump).toBe(true);
   });
 
+  it('snakes (no jump) wait at the edge of a pit instead of sliding in', () => {
+    const brain = new ChaserBrain(SNAKE);
+    const at = brain.update(senses({ gapAhead: true, rabbitX: 60 }), DT);
+    expect(at.vx).toBe(0);
+    expect(at.jump).toBe(false);
+    expect(at.dangerous).toBe(true);
+  });
+
   it('leaps up at a rabbit standing on something right above it', () => {
     const brain = new ChaserBrain(SNOW_LEOPARD);
     expect(brain.update(senses({ rabbitX: 60, rabbitFeetY: 480 }), DT).jump).toBe(true);
@@ -54,7 +62,7 @@ describe('ChaserBrain', () => {
     expect(brain.update(senses(), SNOW_LEOPARD.hitTime).anim).toBe('fall');
 
     const roll = brain.update(senses(), SNOW_LEOPARD.fallTime);
-    expect(roll.anim).toBe('roll');
+    expect(roll.anim).toBe('leave');
     expect(roll.vx).toBe(SNOW_LEOPARD.rollSpeed); // rabbit was to the left: rolls right
     expect(roll.dangerous).toBe(false);
   });
@@ -64,6 +72,29 @@ describe('ChaserBrain', () => {
     brain.caughtRabbit();
     expect(brain.update(senses(), DT).dangerous).toBe(false);
     expect(brain.update(senses(), SNOW_LEOPARD.pauseAfterCatch).dangerous).toBe(true);
+  });
+
+  it('pounces when it gets close on the same level, then has to wait', () => {
+    const brain = new ChaserBrain(FOX);
+    const close = senses({ rabbitX: 120 });
+    const first = brain.update(close, DT);
+    expect(first.anim).toBe('lunge');
+    expect(first.vx).toBe(FOX.lunge!.speed);
+    brain.update(close, FOX.lunge!.time); // lunge over
+    expect(brain.update(close, DT).anim).toBe('run'); // cooling down
+    expect(brain.update(senses({ rabbitX: 120, rabbitFeetY: 400 }), FOX.lunge!.cooldown).anim).toBe('run'); // not level
+  });
+
+  it("can't jump if it has no jump (snakes)", () => {
+    const brain = new ChaserBrain(SNAKE);
+    expect(brain.update(senses({ wallAhead: true, rabbitX: 900 }), DT).jump).toBe(false);
+  });
+
+  it('comes at the rabbit from the front too', () => {
+    const brain = new ChaserBrain(SNOW_LEOPARD);
+    const intent = brain.update(senses({ selfX: 1000, rabbitX: 200 }), DT);
+    expect(intent.vx).toBe(-SNOW_LEOPARD.chaseSpeed);
+    expect(intent.facing).toBe(-1);
   });
 
   it('loses health with each poop hit (for its health bar)', () => {

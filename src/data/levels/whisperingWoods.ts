@@ -126,6 +126,7 @@ const screen6 = [
 export const WHISPERING_WOODS: LevelDef = {
   name: 'WHISPERING WOODS',
   theme: 'forest',
+  special: 'fox',
   leopardSpeed: 1,
   spawner: { earlyInterval: [6.5, 9], lateInterval: [3.5, 5.5] },
   world: buildWorld(joinScreens(ROWS, SCREEN, [

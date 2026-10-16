@@ -1,6 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import { TILE } from '../config';
 import { LEVELS } from '../data/levels';
+import { SPECIALS } from '../data/specials';
 import { buildWorld, burrow, joinScreens, mergeRuns, parseLevel, type LevelMap } from './LevelMap';
 import { canReach, isSpot, reachableSpots, spotOf } from './reachability';
 
@@ -190,3 +191,10 @@ function landingSpot(map: LevelMap, s: { col: number; row: number }): { col: num
   for (let row = s.row; row < map.rows; row++) if (isSpot(map, s.col, row)) return { col: s.col, row };
   return null;
 }
+
+describe('special predators', () => {
+  it('every level has a special predator that exists, and each level has a different one', () => {
+    for (const def of LEVELS) expect(SPECIALS[def.special], def.name).toBeDefined();
+    expect(new Set(LEVELS.map((l) => l.special)).size).toBe(LEVELS.length);
+  });
+});

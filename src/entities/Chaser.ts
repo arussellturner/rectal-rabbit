@@ -1,18 +1,22 @@
 import Phaser from 'phaser';
 import { ChaserBrain } from '../ai/ChaserBrain';
-import { PIXEL, TILE } from '../config';
+import { TILE } from '../config';
 import type { ChaserConfig } from '../data/chasers';
 import type { LevelMap } from '../level/LevelMap';
 import { textStyle } from '../scenes/textStyles';
 import { approach } from './RabbitMotor';
+import { drawHealthBar } from './healthBar';
 import { CATCH_TUNING, TUNING } from './tuning';
 
 /**
- * A snow leopard charging in from behind: an Arcade Physics hitbox driven by
- * a ChaserBrain, plus its animated sprite, dizzy stars, and a flashing "!"
- * at the screen edge while it's still off screen.
+ * A predator on foot: a snow leopard charging in from behind, or one of the
+ * special predators coming from the front (stoat, fox, snake, ice wolf). An
+ * Arcade Physics hitbox driven by a ChaserBrain, plus its animated sprite,
+ * dizzy stars, a health bar, and a flashing "!" at the screen edge while
+ * it's still off screen.
  */
-export class SnowLeopard {
+export class Chaser {
+  readonly kind = 'chaser' as const;
   readonly brain: ChaserBrain;
   readonly hitbox: Phaser.GameObjects.Zone;
   readonly art: Phaser.GameObjects.Sprite;
@@ -41,7 +45,8 @@ export class SnowLeopard {
     this.brain = new ChaserBrain(cfg);
     this.hitbox = scene.add.zone(x, feetY - cfg.hitbox.h / 2, cfg.hitbox.w, cfg.hitbox.h);
     scene.physics.add.existing(this.hitbox);
-    this.art = scene.add.sprite(x, feetY, cfg.sheet, 0).setOrigin(0.5, 1).setDepth(9).setScale(PIXEL);
+    this.art = scene.add.sprite(x, feetY, cfg.sheet, 0).setOrigin(0.5, 1).setDepth(9).setScale(cfg.scale);
+    if (cfg.tint !== undefined) this.art.setTint(cfg.tint);
     this.art.play(`${cfg.sheet}-run`);
     this.warning = scene.add.text(28, 0, '!', textStyle(40, '#f83800')).setOrigin(0.5).setScrollFactor(0).setDepth(30);
     this.stars = [0, 1, 2].map(() => scene.add.image(x, 0, 'star').setDepth(20).setVisible(false));
@@ -69,6 +74,8 @@ export class SnowLeopard {
     const standRow = Math.floor((body.bottom + 2) / TILE);
     let gapAhead = this.onGround;
     for (let row = standRow; row < level.rows && gapAhead; row++) if (level.isFloor(col, row)) gapAhead = false;
+    // Water, quicksand and lava count as a gap too.
+    if (this.onGround && level.hazards.some((h) => front > h.x && front < h.x + h.w)) gapAhead = true;
 
     const intent = this.brain.update(
       {
@@ -90,21 +97,24 @@ export class SnowLeopard {
     // Heavier on the way down, like the rabbit: snappy, not floaty.
     body.setGravityY(body.velocity.y > 0 ? TUNING.gravity * (TUNING.fallGravityMultiplier - 1) : 0);
     // Rolling away and bumped into a wall: bounce over it.
-    if (this.brain.state === 'roll' && this.onGround && (body.blocked.left || body.blocked.right)) {
+    if (this.brain.state === 'roll' && this.cfg.jumpVelocity > 0 && this.onGround && (body.blocked.left || body.blocked.right)) {
       body.setVelocityY(-560);
     }
 
     this.updateArt(intent.anim, intent.facing);
     this.drawHealth(dt);
 
+    const camRight = camLeft + cam.width;
     const offLeft = body.right < camLeft - 400 && this.brain.leaving;
-    const offRight = body.left > camLeft + cam.width + 400;
+    const offRight = body.left > camRight + 400;
     if (offLeft || offRight || body.top > level.height + 60) this.gone = true;
 
-    // Still off screen and coming: flash a "!" at the left edge.
-    const incoming = body.right < camLeft && intent.dangerous;
+    // Still off screen and coming: flash a "!" at that edge of the screen.
+    const behind = body.right < camLeft;
+    const ahead = body.left > camRight;
     this.warning
-      .setVisible(incoming && Math.floor(this.time * 6) % 2 === 0)
+      .setVisible((behind || ahead) && intent.dangerous && Math.floor(this.time * 6) % 2 === 0)
+      .setX(ahead ? cam.width - 28 : 28)
       .setY(Phaser.Math.Clamp(body.center.y, 60, cam.height - 60));
   }
 
@@ -148,7 +158,10 @@ export class SnowLeopard {
 
   private flash(): void {
     this.art.setTint(0xffffff).setTintMode(Phaser.TintModes.FILL);
-    this.scene.time.delayedCall(70, () => this.art.clearTint().setTintMode(Phaser.TintModes.MULTIPLY));
+    this.scene.time.delayedCall(70, () => {
+      this.art.clearTint().setTintMode(Phaser.TintModes.MULTIPLY);
+      if (this.cfg.tint !== undefined) this.art.setTint(this.cfg.tint);
+    });
   }
 
   destroy(): void {
@@ -165,53 +178,22 @@ export class SnowLeopard {
    * and once it's rolling away.
    */
   private drawHealth(dt: number): void {
-    const g = this.healthBar;
-    g.clear();
     const brain = this.brain;
-    if (brain.hits === 0 || brain.state === 'roll') return;
-
-    const target = brain.health;
-    this.shownHealth = Math.max(target, this.shownHealth - dt * 2.5);
-    const blocks = this.cfg.hitsToScare;
-    const blockW = 8 * PIXEL;
-    const gap = PIXEL;
-    const w = blocks * blockW + (blocks - 1) * gap;
-    const h = 3 * PIXEL;
-    const x = Math.round(this.hitbox.x - w / 2);
-    const y = Math.round(this.body.top - 44);
-
-    // Black border, dark empty blocks, then the colored fill.
-    g.fillStyle(0x000000, 1).fillRect(x - PIXEL, y - PIXEL, w + 2 * PIXEL, h + 2 * PIXEL);
-    const color = target > 0.6 ? 0x58d854 : target > 0.3 ? 0xfce048 : 0xf83800;
-    for (let i = 0; i < blocks; i++) {
-      const bx = x + i * (blockW + gap);
-      g.fillStyle(0x3c3c3c, 1).fillRect(bx, y, blockW, h);
-      // How much of this block is still full.
-      const fill = Phaser.Math.Clamp(this.shownHealth * blocks - i, 0, 1);
-      if (fill <= 0) continue;
-      // Draining part flashes white, the rest is the health color.
-      const real = Phaser.Math.Clamp(target * blocks - i, 0, 1);
-      if (fill > real) g.fillStyle(0xfcfcfc, 1).fillRect(bx, y, Math.round(blockW * fill), h);
-      if (real > 0) g.fillStyle(color, 1).fillRect(bx, y, Math.round(blockW * real), h);
-      g.fillStyle(0xffffff, 0.35).fillRect(bx, y, Math.round(blockW * Math.max(fill, real)), PIXEL);
-    }
+    const show = brain.hits > 0 && brain.state !== 'roll';
+    this.shownHealth = Math.max(brain.health, this.shownHealth - dt * 2.5);
+    drawHealthBar(this.healthBar, show, this.hitbox.x, this.body.top - 44, this.cfg.hitsToScare, brain.health, this.shownHealth);
   }
 
   private updateArt(anim: string, facing: 1 | -1): void {
     const key = `${this.cfg.sheet}-${anim}`;
     const art = this.art;
-    if (anim === 'run' && !this.onGround) {
-      // Mid-leap: hold the stretched-out running frame.
-      art.anims.stop();
-      art.setFrame(2);
-    } else {
-      art.play(key, true);
-    }
-    const offset = anim === 'roll' ? 0 : this.cfg.tailOffset;
-    art.setPosition(this.hitbox.x - facing * offset, this.body.bottom + PIXEL).setFlipX(facing < 0);
+    // Mid-leap: the jumping pose.
+    art.play(anim === 'run' && !this.onGround ? `${this.cfg.sheet}-air` : key, true);
+    const offset = anim === 'leave' && this.cfg.curlsUp ? 0 : this.cfg.tailOffset;
+    art.setPosition(this.hitbox.x - facing * offset, this.body.bottom + this.cfg.scale).setFlipX(facing < 0);
 
     const dizzy = anim === 'fall';
-    const headX = this.hitbox.x + facing * 30;
+    const headX = this.hitbox.x + facing * this.cfg.hitbox.w * 0.3;
     const headY = this.body.top - 4;
     this.stars.forEach((star, i) => {
       const a = this.time * 6 + (i * Math.PI * 2) / 3;

@@ -125,6 +125,7 @@ const screen6 = [
 export const VOLCANO_PEAK: LevelDef = {
   name: 'VOLCANO PEAK',
   theme: 'volcano',
+  special: 'goldenEagle',
   leopardSpeed: 1.1,
   spawner: { earlyInterval: [4.5, 7], lateInterval: [2.5, 4], maxEarly: 2, maxLate: 3 },
   world: buildWorld(joinScreens(ROWS, SCREEN, [

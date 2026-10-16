@@ -4,6 +4,7 @@ import { TILE_VARIANTS } from '../art/pixelTextures';
 import { themeKey } from '../art/themeTextures';
 import { SNOW_LEOPARD, type ChaserConfig } from '../data/chasers';
 import { LEVELS, type LevelDef } from '../data/levels';
+import { SPECIALS, type Special } from '../data/specials';
 import { THEMES, type Theme } from '../data/themes';
 import { progress } from '../systems/save';
 import { CarrotPickup } from '../entities/CarrotPickup';
@@ -12,7 +13,8 @@ import { GrassPatch } from '../entities/GrassPatch';
 import { BOMB_COST, MAX_BOMBS, PoopBomb } from '../entities/PoopBomb';
 import { PoopPellets } from '../entities/PoopPellets';
 import { Rabbit, type RabbitEvents } from '../entities/Rabbit';
-import { SnowLeopard } from '../entities/SnowLeopard';
+import { Chaser } from '../entities/Chaser';
+import { Flyer } from '../entities/Flyer';
 import { CATCH_TUNING, TUNING } from '../entities/tuning';
 import { input } from '../input/InputManager';
 import type { LevelMap, Rect, Spot, World } from '../level/LevelMap';
@@ -75,6 +77,8 @@ function boxGap(a: Box, b: Box): number {
 }
 
 type Mode = 'play' | 'won' | 'over';
+/** Anything that can catch the rabbit: on foot (snow leopards, stoats, foxes...) or a bird. */
+type Enemy = Chaser | Flyer;
 /** Where the rabbit is: up top, or down in burrow number N. */
 type Location = 'overworld' | number;
 
@@ -114,9 +118,17 @@ export class LevelScene extends Phaser.Scene {
   private pellets!: PoopPellets;
   private bombs: PoopBomb[] = [];
   private bombGroup!: Phaser.Physics.Arcade.Group;
-  private leopards: SnowLeopard[] = [];
+  private enemies: Enemy[] = [];
+  /** Predators on foot (they stand on the ground). */
   private leopardGroup!: Phaser.Physics.Arcade.Group;
+  /** Birds (no gravity, fly through everything). */
+  private flyerGroup!: Phaser.Physics.Arcade.Group;
   private spawner!: LeopardSpawner;
+  /** Sends this level's special predator in from the front. */
+  private specialSpawner!: LeopardSpawner;
+  private special: Special = SPECIALS.stoat;
+  /** The first special predator gets a heads-up message. */
+  private specialSeen = false;
   private grassBits!: Phaser.GameObjects.Particles.ParticleEmitter;
   private poopBits!: Phaser.GameObjects.Particles.ParticleEmitter;
   private dirtBits!: Phaser.GameObjects.Particles.ParticleEmitter;
@@ -126,9 +138,9 @@ export class LevelScene extends Phaser.Scene {
   /** Sitting under the title screen, zoomed in, waiting for start. */
   private intro = false;
   private slowMo = new SlowMo();
-  /** The jaws are closing (slow motion) on this leopard's catch. */
-  private catching: { by: SnowLeopard; left: number } | null = null;
-  private nearMisses = new Map<SnowLeopard, NearMiss>();
+  /** The jaws are closing (slow motion) on this predator's catch. */
+  private catching: { by: Enemy; left: number } | null = null;
+  private nearMisses = new Map<Enemy, NearMiss>();
 
   constructor() {
     super('Level');
@@ -157,6 +169,7 @@ export class LevelScene extends Phaser.Scene {
     this.theme = THEMES[this.def.theme];
     const speed = this.def.leopardSpeed;
     this.leopardCfg = { ...SNOW_LEOPARD, chaseSpeed: SNOW_LEOPARD.chaseSpeed * speed, catchUpSpeed: SNOW_LEOPARD.catchUpSpeed * speed };
+    this.special = SPECIALS[this.def.special];
   }
 
   create(): void {
@@ -166,7 +179,8 @@ export class LevelScene extends Phaser.Scene {
     this.busy = false;
     this.lives = START_LIVES;
     this.carrots = 0;
-    this.leopards = [];
+    this.enemies = [];
+    this.specialSeen = false;
     this.bombs = [];
     this.grass = [];
     this.carrotPickups = [];
@@ -228,15 +242,30 @@ export class LevelScene extends Phaser.Scene {
     this.leopardGroup = this.physics.add.group();
     this.physics.add.collider(this.leopardGroup, solids);
     this.physics.add.collider(this.leopardGroup, oneWays);
-    this.physics.add.overlap(this.leopardGroup, this.pellets.group, (h, p) => this.pelletHitLeopard(h, p));
+    this.physics.add.overlap(this.leopardGroup, this.pellets.group, (h, p) => this.pelletHitEnemy(h, p));
     this.physics.add.overlap(this.leopardGroup, this.bombGroup, (h, b) => {
-      const leopard = (h as Phaser.GameObjects.Zone).getData('leopard') as SnowLeopard | undefined;
+      const enemy = (h as Phaser.GameObjects.Zone).getData('enemy') as Enemy | undefined;
       const bomb = (b as Phaser.GameObjects.Image).getData('bomb') as PoopBomb | undefined;
-      if (leopard && bomb && !bomb.done && !leopard.brain.leaving) this.explode(bomb, leopard);
+      if (enemy && bomb && !bomb.done && !enemy.brain.leaving) this.explode(bomb, enemy);
     });
+    // Birds fly through walls and over bombs; only poop can reach them.
+    this.flyerGroup = this.physics.add.group({ allowGravity: false });
+    this.physics.add.overlap(this.flyerGroup, this.pellets.group, (h, p) => this.pelletHitEnemy(h, p));
 
     const home = level.home ?? level.spawn;
     this.spawner = new LeopardSpawner({ ...DEFAULT_SPAWNER, ...this.def.spawner, stopX: home.x - 14 * TILE });
+    const flyer = this.special.type === 'flyer';
+    this.specialSpawner = new LeopardSpawner({
+      ...DEFAULT_SPAWNER,
+      startX: 900,
+      earlyInterval: [9, 13],
+      lateInterval: [6, 9],
+      maxEarly: 1,
+      maxLate: flyer ? 1 : 2,
+      firstDelay: 2,
+      ...this.def.specialSpawner,
+      stopX: home.x - 16 * TILE,
+    });
 
     this.grassBits = this.add.particles(0, 0, 'grass-bit', {
       speed: { min: 80, max: 180 },
@@ -336,7 +365,18 @@ export class LevelScene extends Phaser.Scene {
       .setScrollFactor(0)
       .setDepth(40);
     const name = this.add.text(cx, 300, this.def.name, textStyle(40, this.theme.accent)).setOrigin(0.5).setScrollFactor(0).setDepth(40);
-    this.tweens.add({ targets: [top, name], alpha: 0, delay: 1800, duration: 600, onComplete: () => (top.destroy(), name.destroy()) });
+    const watch = this.add
+      .text(cx, 350, `WATCH OUT FOR ${this.special.plural}!`, textStyle(16, '#fcbcb0'))
+      .setOrigin(0.5)
+      .setScrollFactor(0)
+      .setDepth(40);
+    this.tweens.add({
+      targets: [top, name, watch],
+      alpha: 0,
+      delay: 2200,
+      duration: 600,
+      onComplete: () => (top.destroy(), name.destroy(), watch.destroy()),
+    });
   }
 
   update(_time: number, deltaMs: number): void {
@@ -369,7 +409,7 @@ export class LevelScene extends Phaser.Scene {
     // Under the title the camera holds still, zoomed in on the rabbit.
     if (this.intro) return;
     this.updateCamera();
-    this.updateLeopards(dt);
+    this.updateEnemies(dt);
 
     const pile = this.pileUnderfoot();
     this.updateHint(underfoot, pile);
@@ -423,51 +463,75 @@ export class LevelScene extends Phaser.Scene {
     }
   }
 
-  private updateLeopards(dt: number): void {
+  private isLeopard(e: Enemy): boolean {
+    return e.kind === 'chaser' && e.cfg === this.leopardCfg;
+  }
+
+  private updateEnemies(dt: number): void {
     const r = this.rabbit;
     const cam = this.cameras.main;
-    const target = { x: r.hitbox.x, feetY: r.body.bottom };
+    const target = { x: r.hitbox.x, centerY: r.body.center.y, feetY: r.body.bottom };
 
     if (this.mode === 'play' && !this.busy && !this.underground && !this.catching && !NO_LEOPARDS) {
-      const active = this.leopards.filter((l) => !l.brain.leaving).length;
-      if (this.spawner.update(dt, r.hitbox.x, active)) this.spawnLeopard();
+      const coming = this.enemies.filter((e) => !e.brain.leaving);
+      const leopards = coming.filter((e) => this.isLeopard(e)).length;
+      if (this.spawner.update(dt, r.hitbox.x, leopards)) this.spawnLeopard();
+      if (this.specialSpawner.update(dt, r.hitbox.x, coming.length - leopards)) this.spawnSpecial();
     }
 
-    for (const leopard of this.leopards) {
-      leopard.update(dt, target, this.level, cam);
-      if (!leopard.gone && this.inHazard(leopard.body)) {
-        leopard.gone = true;
-        this.dirtBits.explode(16, leopard.hitbox.x, leopard.body.bottom);
+    for (const enemy of this.enemies) {
+      if (enemy.kind === 'flyer') {
+        enemy.update(dt, target, this.level.height, cam);
+      } else {
+        enemy.update(dt, target, this.level, cam);
+        if (!enemy.gone && this.inHazard(enemy.body)) {
+          enemy.gone = true;
+          this.dirtBits.explode(16, enemy.hitbox.x, enemy.body.bottom);
+        }
       }
       const canCatch = this.mode === 'play' && !this.busy && !this.catching && !r.invulnerable;
       const rb = this.catchBox();
-      const lb = leopard.body;
+      const lb = enemy.body;
       const gap = boxGap(rb, lb);
-      if (canCatch && leopard.canBite && gap === 0) {
-        this.caught(leopard);
+      if (canCatch && enemy.canBite && gap === 0) {
+        this.caught(enemy);
         continue;
       }
       // Got right up to it and away again: CLOSE!
       if (this.catching) continue;
-      let near = this.nearMisses.get(leopard);
-      if (!near) this.nearMisses.set(leopard, (near = new NearMiss(() => CATCH_TUNING)));
-      const attacking = canCatch && leopard.dangerous;
-      if (near.update(realDtOf(dt, this.slowMo.scale), { attacking, pouncing: leopard.airborne, gap, biting: attacking && gap === 0 })) {
-        this.nearMiss(leopard);
+      let near = this.nearMisses.get(enemy);
+      if (!near) this.nearMisses.set(enemy, (near = new NearMiss(() => CATCH_TUNING)));
+      const attacking = canCatch && enemy.dangerous;
+      if (near.update(realDtOf(dt, this.slowMo.scale), { attacking, pouncing: enemy.airborne, gap, biting: attacking && gap === 0 })) {
+        this.nearMiss(enemy);
       }
     }
-    for (const l of this.leopards) if (l.gone) this.nearMisses.delete(l);
-    this.removeLeopards((l) => l.gone);
+    for (const e of this.enemies) if (e.gone) this.nearMisses.delete(e);
+    this.removeEnemies((e) => e.gone);
   }
 
-  private removeLeopards(which: (l: SnowLeopard) => boolean): void {
-    const going = this.leopards.filter(which);
+  private removeEnemies(which: (e: Enemy) => boolean): void {
+    const going = this.enemies.filter(which);
     if (going.length === 0) return;
-    for (const l of going) {
-      this.leopardGroup.remove(l.hitbox);
-      l.destroy();
+    for (const e of going) {
+      (e.kind === 'flyer' ? this.flyerGroup : this.leopardGroup).remove(e.hitbox);
+      e.destroy();
     }
-    this.leopards = this.leopards.filter((l) => !going.includes(l));
+    this.enemies = this.enemies.filter((e) => !going.includes(e));
+  }
+
+  private addEnemy(enemy: Enemy): void {
+    (enemy.kind === 'flyer' ? this.flyerGroup : this.leopardGroup).add(enemy.hitbox);
+    enemy.hitbox.setData('enemy', enemy);
+    this.enemies.push(enemy);
+  }
+
+  /** The top of the ground in column `col` (the first solid tile with air above it), or null. */
+  private groundTop(col: number): number | null {
+    for (let row = 1; row < this.level.rows; row++) {
+      if (this.level.isSolid(col, row) && !this.level.isSolid(col, row - 1)) return row * TILE;
+    }
+    return null;
   }
 
   /** A new snow leopard comes running in from the left, just off screen. */
@@ -477,20 +541,47 @@ export class LevelScene extends Phaser.Scene {
     const startCol = Math.floor(x / TILE);
     // Find solid ground to drop it on, searching backwards past any pit.
     for (let col = startCol; col > startCol - 12 && col >= 0; col--) {
-      for (let row = 1; row < this.level.rows; row++) {
-        if (!this.level.isSolid(col, row) || this.level.isSolid(col, row - 1)) continue;
-        const leopard = new SnowLeopard(this, cfg, Math.min(x, (col + 0.5) * TILE), row * TILE);
-        this.leopardGroup.add(leopard.hitbox);
-        leopard.hitbox.setData('leopard', leopard);
-        this.leopards.push(leopard);
-        return;
-      }
+      const feetY = this.groundTop(col);
+      if (feetY === null) continue;
+      this.addEnemy(new Chaser(this, cfg, Math.min(x, (col + 0.5) * TILE), feetY));
+      return;
     }
   }
 
-  private pelletHitLeopard(h: unknown, p: unknown): void {
+  /** This level's special predator comes at you from the right, just off screen. */
+  private spawnSpecial(): void {
+    const special = this.special;
+    const camRight = this.cameras.main.scrollX + GAME_WIDTH;
+    if (special.type === 'flyer') {
+      const x = camRight + 100;
+      const col = Phaser.Math.Clamp(Math.floor(this.rabbit.hitbox.x / TILE), 0, this.level.cols - 1);
+      const ground = this.groundTop(col) ?? this.rabbit.body.bottom;
+      this.addEnemy(new Flyer(this, special.cfg, x, Math.max(150, ground - special.cfg.cruiseHeight)));
+    } else {
+      const x = camRight + 80;
+      const startCol = Math.floor(x / TILE);
+      // Find solid ground to drop it on, searching forwards past any pit.
+      let placed = false;
+      for (let col = startCol; col < startCol + 12 && col < this.level.cols; col++) {
+        const feetY = this.groundTop(col);
+        if (feetY === null) continue;
+        this.addEnemy(new Chaser(this, special.cfg, Math.max(x, (col + 0.5) * TILE), feetY));
+        placed = true;
+        break;
+      }
+      if (!placed) return;
+    }
+    if (!this.specialSeen) {
+      this.specialSeen = true;
+      const cx = () => this.cameras.main.scrollX + GAME_WIDTH / 2;
+      this.floatText(cx(), 230, `${special.cfg.name.toUpperCase()} AHEAD!`, '#f83800', 24);
+      this.time.delayedCall(800, () => this.floatText(cx(), 270, 'TURN AROUND TO POOP IT!', '#fce0a8', 16));
+    }
+  }
+
+  private pelletHitEnemy(h: unknown, p: unknown): void {
     const pellet = p as Phaser.Physics.Arcade.Image;
-    const leopard = (h as Phaser.GameObjects.Zone).getData('leopard') as SnowLeopard | undefined;
+    const leopard = (h as Phaser.GameObjects.Zone).getData('enemy') as Enemy | undefined;
     // Leopards already knocked over let poop fly right past (so bomb poop can reach the others).
     if (!leopard || leopard.brain.leaving || !this.pellets.isFlying(pellet)) return;
     this.poopBits.explode(12, pellet.x, pellet.y);
@@ -510,7 +601,7 @@ export class LevelScene extends Phaser.Scene {
   }
 
   /** KA-POOP! Knocks over the leopard that stepped in it and sprays poop at any others. */
-  private explode(bomb: PoopBomb, by: SnowLeopard | null): void {
+  private explode(bomb: PoopBomb, by: Enemy | null): void {
     const x = bomb.x;
     const y = bomb.y - 18;
     bomb.detonate();
@@ -542,7 +633,7 @@ export class LevelScene extends Phaser.Scene {
   }
 
   /** The jaws close: slow motion and a little zoom in, then `finishCatch` takes the heart. */
-  private caught(by: SnowLeopard): void {
+  private caught(by: Enemy): void {
     this.catching = { by, left: CATCH_TUNING.catchSlowMoTime };
     // A catch is never also a near miss.
     for (const n of this.nearMisses.values()) n.reset();
@@ -555,7 +646,7 @@ export class LevelScene extends Phaser.Scene {
   }
 
   /** After the slow-motion bite: back to normal speed, then the usual OUCH and the heart lost. */
-  private finishCatch(by: SnowLeopard): void {
+  private finishCatch(by: Enemy): void {
     this.catching = null;
     this.slowMo.stop();
     this.applyTimeScale(1);
@@ -573,10 +664,11 @@ export class LevelScene extends Phaser.Scene {
     this.rabbit.invulnerableTimer = SAFE_TIME;
     this.rabbit.knockback(this.rabbit.hitbox.x >= by.hitbox.x ? 1 : -1);
     this.spawner.delay(3);
+    this.specialSpawner.delay(3);
   }
 
   /** The rabbit got right up to a leopard and away again: SNAP! CLOSE! */
-  private nearMiss(by: SnowLeopard): void {
+  private nearMiss(by: Enemy): void {
     const r = this.rabbit;
     this.floatText(by.hitbox.x, by.body.top - 40, 'SNAP!', '#fcbcb0', 16);
     this.floatText(r.hitbox.x, r.body.top - 40, 'CLOSE!', '#fce048', 24);
@@ -602,10 +694,11 @@ export class LevelScene extends Phaser.Scene {
     if (this.loseLife()) return;
     // Back to the last checkpoint, with the leopards cleared away.
     const spot = this.respawnSpot;
-    this.removeLeopards(() => true);
+    this.removeEnemies(() => true);
     this.cameras.main.scrollX = Phaser.Math.Clamp(spot.x - CAMERA_LEAD, 0, this.level.width - GAME_WIDTH);
     this.rabbit.respawn(spot.x, spot.y - 30, SAFE_TIME);
     this.spawner.delay(4);
+    this.specialSpawner.delay(4);
   }
 
   /** Returns true if that was the last life. */
@@ -627,7 +720,7 @@ export class LevelScene extends Phaser.Scene {
     r.freezeArt = true;
     r.invulnerableTimer = 999;
     // Every leopard gives up and rolls away.
-    for (const l of this.leopards) l.blast(r.hitbox.x);
+    for (const l of this.enemies) l.blast(r.hitbox.x);
     this.tweens.add({
       targets: r.art,
       alpha: 0,
@@ -670,7 +763,7 @@ export class LevelScene extends Phaser.Scene {
     cam.once(Phaser.Cameras.Scene2D.Events.FADE_OUT_COMPLETE, () => {
       const burrow = this.burrows[i];
       this.location = i;
-      this.removeLeopards(() => true);
+      this.removeEnemies(() => true);
       this.weather.setVisible(false);
       this.rabbit.respawn(burrow.x + burrow.map.spawn.x, burrow.map.spawn.y - 30, 0);
       this.endTransition();
@@ -697,6 +790,7 @@ export class LevelScene extends Phaser.Scene {
       this.dirtBits.explode(24, hole.x, hole.y - 10);
       if (hole.x > this.respawnSpot.x) this.respawnSpot = hole;
       this.spawner.delay(5);
+      this.specialSpawner.delay(5);
       this.endTransition();
       cam.fadeIn(250, 0, 0, 0);
       input.rumble(150, 0.5, 0.3);

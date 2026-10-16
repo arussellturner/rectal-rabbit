@@ -125,6 +125,7 @@ const screen6 = [
 export const DUNE_SEA: LevelDef = {
   name: 'DUNE SEA',
   theme: 'desert',
+  special: 'snake',
   leopardSpeed: 1.03,
   spawner: { earlyInterval: [6, 8.5], lateInterval: [3.5, 5] },
   world: buildWorld(joinScreens(ROWS, SCREEN, [

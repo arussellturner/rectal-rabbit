@@ -160,6 +160,7 @@ const screen7 = [
 export const SNOWY_RIDGE: LevelDef = {
   name: 'SNOWY RIDGE',
   theme: 'snow',
+  special: 'stoat',
   leopardSpeed: 1,
   world: buildWorld(joinScreens(ROWS, SCREEN, [
     screen1,

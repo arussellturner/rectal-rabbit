@@ -7,7 +7,7 @@ import type { ChaserConfig } from '../data/chasers';
  */
 export type ChaserState = 'chase' | 'stagger' | 'knockdown' | 'roll' | 'pause';
 
-export type ChaserAnim = 'run' | 'hit' | 'fall' | 'roll' | 'idle';
+export type ChaserAnim = 'run' | 'hit' | 'fall' | 'leave' | 'idle' | 'lunge';
 
 /** What the chaser senses this frame (worked out by the game from the level). */
 export interface ChaserSenses {
@@ -46,6 +46,9 @@ export class ChaserBrain {
   private stateTime = 0;
   private sinceJump = Infinity;
   private rollDir: 1 | -1 = -1;
+  /** Seconds left of a lunge (a pounce or a snake strike). */
+  private lungeLeft = 0;
+  private lungeCooldown = 0;
 
   constructor(readonly cfg: ChaserConfig) {}
 
@@ -53,6 +56,8 @@ export class ChaserBrain {
     const c = this.cfg;
     this.stateTime += dt;
     this.sinceJump += dt;
+    this.lungeLeft = Math.max(0, this.lungeLeft - dt);
+    this.lungeCooldown = Math.max(0, this.lungeCooldown - dt);
 
     switch (this.state) {
       case 'stagger':
@@ -67,22 +72,38 @@ export class ChaserBrain {
         if (this.stateTime < c.hitTime) return this.intent(0, 'hit', false);
         if (this.stateTime < c.hitTime + c.fallTime) return this.intent(0, 'fall', false);
         this.enter('roll');
-        return this.intent(this.rollDir * c.rollSpeed, 'roll', false);
+        return this.intent(this.rollDir * c.rollSpeed, 'leave', false);
       case 'roll':
-        return this.intent(this.rollDir * c.rollSpeed, 'roll', false);
+        return this.intent(this.rollDir * c.rollSpeed, 'leave', false);
       case 'chase':
         break;
     }
 
     const dx = s.rabbitX - s.selfX;
+    // Can't jump (a snake) and there's a pit just ahead: wait at the edge.
+    const stuck = c.jumpVelocity <= 0 && s.gapAhead && s.onGround;
+    // Mid-lunge it's committed: straight ahead, fast.
+    if (this.lungeLeft > 0 && c.lunge) {
+      if (stuck) this.lungeLeft = 0;
+      else return { vx: this.facing * c.lunge.speed, jump: false, facing: this.facing, anim: 'lunge', dangerous: true };
+    }
     if (Math.abs(dx) > 8) this.facing = dx > 0 ? 1 : -1;
     const speed = s.offScreen ? c.catchUpSpeed : c.chaseSpeed;
+
+    // Close, and on the same level as the rabbit: pounce!
+    const level = Math.abs(s.feetY - s.rabbitFeetY) < 40;
+    if (!stuck && c.lunge && s.onGround && level && Math.abs(dx) < c.lunge.range && this.lungeCooldown <= 0 && !s.offScreen) {
+      this.lungeLeft = c.lunge.time;
+      this.lungeCooldown = c.lunge.cooldown;
+      return { vx: this.facing * c.lunge.speed, jump: false, facing: this.facing, anim: 'lunge', dangerous: true };
+    }
 
     // Rabbit is up on something right above it: leap up after it.
     const rabbitAbove = s.feetY - s.rabbitFeetY > 40 && Math.abs(dx) < 160;
     const wantsJump = s.wallAhead || s.gapAhead || rabbitAbove;
-    const jump = wantsJump && s.onGround && this.sinceJump >= c.jumpCooldown;
+    const jump = c.jumpVelocity > 0 && wantsJump && s.onGround && this.sinceJump >= c.jumpCooldown;
     if (jump) this.sinceJump = 0;
+    if (stuck) return { vx: 0, jump: false, facing: this.facing, anim: 'idle', dangerous: true };
 
     return { vx: this.facing * speed, jump, facing: this.facing, anim: 'run', dangerous: true };
   }

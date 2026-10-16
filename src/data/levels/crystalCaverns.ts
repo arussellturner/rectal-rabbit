@@ -125,6 +125,7 @@ const screen6 = [
 export const CRYSTAL_CAVERNS: LevelDef = {
   name: 'CRYSTAL CAVERNS',
   theme: 'cave',
+  special: 'iceWolf',
   leopardSpeed: 1.07,
   spawner: { earlyInterval: [5, 7.5], lateInterval: [3, 4.5], maxLate: 3 },
   world: buildWorld(joinScreens(ROWS, SCREEN, [

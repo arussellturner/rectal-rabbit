@@ -44,7 +44,7 @@ remote; `origin` is `arussellturner/rectal-rabbit`).
 ### Handy URL flags
 
 - `?play` skips the title screen; `?level=4` jumps straight to level 4.
-- `?calm` turns off the snow leopards, for exploring the level.
+- `?calm` turns off the snow leopards and the special predators, for exploring the level.
 - `?at=100` starts the rabbit at tile column 100 (drops in from the sky).
 - `?tune` opens a slider panel for jump height, speed, gravity, coyote time,
   bite time, poop speed, and so on. Changes apply live and are remembered in
@@ -55,18 +55,19 @@ remote; `origin` is `arussellturner/rectal-rabbit`).
 
 ## Levels
 
-| # | Level | World | What's special |
-|---|---|---|---|
-| 1 | Snowy Ridge | Snow | Learn the ropes |
-| 2 | Whispering Woods | Forest | A winding river, crate towers, falling leaves |
-| 3 | Dune Sea | Desert | Quicksand pools, sandstone mesas, blowing sand |
-| 4 | Vine Temple | Jungle | Swamps, vine bridges, temple ruins |
-| 5 | Crystal Caverns | Ice cave | A rock ceiling overhead, icy pools, crystals |
-| 6 | Volcano Peak | Volcano | Lava everywhere and the fastest leopards |
+| # | Level | World | What's special | Predator from the front |
+|---|---|---|---|---|
+| 1 | Snowy Ridge | Snow | Learn the ropes | **Stoat**: small, quick, 1 hit |
+| 2 | Whispering Woods | Forest | A winding river, crate towers, falling leaves | **Fox**: pounces when it gets close, 2 hits |
+| 3 | Dune Sea | Desert | Quicksand pools, sandstone mesas, blowing sand | **Snake**: slow and low, strikes, can't jump (waits at pits), 2 hits |
+| 4 | Vine Temple | Jungle | Swamps, vine bridges, temple ruins | **Hawk**: flies over, then swoops down at you, 1 hit |
+| 5 | Crystal Caverns | Ice cave | A rock ceiling overhead, icy pools, crystals | **Ice wolf**: big, pounces, 3 hits |
+| 6 | Volcano Peak | Volcano | Lava everywhere and the fastest leopards | **Golden eagle**: bigger, faster hawk, 2 hits |
 
 Finish a level to unlock the next. On the title screen, press left / right to
 pick any level you've unlocked (saved in your browser). Water, quicksand and
-lava (`~`) cost a heart if you fall in, and snow leopards that fall in are gone.
+lava (`~`) cost a heart if you fall in. Predators jump over them; any that
+fall in are gone.
 
 ## How to play
 
@@ -76,6 +77,11 @@ lava (`~`) cost a heart if you fall in, and snow leopards that fall in are gone.
   of the screen when one is about to show up. They're a bit slower than you, so
   you can outrun them, but not while you stop to eat. They jump over walls,
   pits, and up onto ledges after you.
+- Every level also has its own **special predator** that comes at you from
+  the **front** (see the table above). The **!** flashes at the right edge
+  when one is coming. Poop comes out the back, so **turn around** to poop it,
+  or jump over it. Birds cruise overhead and then swoop: jump or run out of
+  the way at the last moment, or poop them when they come down low.
 - Poop comes out the back, which is right where the leopards are. Hit one
   **once** and it stumbles. Hit it **twice** and it falls over, sees stars,
   and rolls away. Once a leopard's been hit, a health bar over its head shows
@@ -221,6 +227,12 @@ python3 -m venv .venv && .venv/bin/pip install pillow numpy scipy
 .venv/bin/python tools/extract_sprites.py
 ```
 
+The stoat (weasel), fox, snake, hawk and wolf sprites are Marshall's, from
+[turnerm5/rectal-rabbit](https://github.com/turnerm5/rectal-rabbit). His
+sprites are drawn with 2×2 screen pixels per art pixel (ours are 3×3), so they
+look a little finer. The ice wolf and golden eagle are his wolf and hawk,
+tinted.
+
 Which frames make up which animation (run, jump, poop, getting hit, falling
 down, rolling away) is listed in `src/data/spriteSheets.ts`.
 
@@ -236,11 +248,14 @@ src/
 ├── level/LevelMap.ts     Turns a text level (and its burrows) into tiles and physics boxes
 ├── level/reachability.ts Can the rabbit get there? (used by the tests)
 ├── ai/
-│   ├── ChaserBrain.ts    Snow leopard: chase, jump, stagger, fall, roll away
+│   ├── ChaserBrain.ts    Predators on foot: chase, jump, pounce, stagger, fall, run away
+│   ├── FlyerBrain.ts     Birds: cruise, dive, climb, stagger, fall out of the sky
 │   └── PredatorBrain.ts  Stealth fox from step 3 (patrol / ? / ! / chase); not in level 1
 ├── entities/
 │   ├── Rabbit.ts         The player: movement, eating, shooting, animation
-│   ├── SnowLeopard.ts    A snow leopard: body, sprite, dizzy stars, "!" warning
+│   ├── Chaser.ts         A predator on foot: body, sprite, dizzy stars, "!" warning
+│   ├── Flyer.ts          A bird of prey: body, sprite, "!" warning
+│   ├── healthBar.ts      The 8-bit health bar over a predator's head
 │   ├── RabbitMotor.ts    Movement rules: accel, coyote time, jump buffer…
 │   ├── CarrotPickup.ts   Carrots: in bubbles above ground, loose in burrows
 │   ├── PoopBomb.ts       The poop bomb sitting on the ground
@@ -249,7 +264,7 @@ src/
 │   ├── PoopPellets.ts    Flying/landed poop pellets
 │   └── tuning.ts         All the movement and poop numbers
 ├── systems/
-│   ├── LeopardSpawner.ts When leopards show up (more, more often, later on)
+│   ├── LeopardSpawner.ts When predators show up (more, more often, later on)
 │   ├── PoopAmmo.ts       How many poops you're carrying
 │   └── GrassState.ts     Bites left + regrowth timer
 ├── scenes/               Boot → Title → Level (+ Hud, Pause/help, End on top)
@@ -258,7 +273,9 @@ src/
 ├── data/
 │   ├── levels/           Every level, drawn in text, plus the shared burrows
 │   ├── themes.ts         Each world's colors, scenery and weather
-│   ├── chasers.ts        Snow leopard speeds and timings (just data)
+│   ├── chasers.ts        Snow leopard, stoat, fox, snake, ice wolf (just data)
+│   ├── flyers.ts         Hawk and golden eagle (just data)
+│   ├── specials.ts       Which special predators there are (each level picks one)
 │   ├── spriteSheets.ts   Sprite sheet frame sizes and animations
 │   └── predators.ts      Fox senses and timings (for stealth levels later)
 └── debug/tuningPanel.ts  The ?tune slider panel
@@ -274,7 +291,8 @@ tested. Adding a new chaser is mostly copying `SNOW_LEOPARD` in
 The title zoom-out, the slow-motion catch, near misses, the fairer catch
 boxes, poop knockback and texture warm-up come from Marshall's version of the
 game ([turnerm5/rectal-rabbit](https://github.com/turnerm5/rectal-rabbit)).
-`src/systems/NearMiss.ts` and `src/systems/SlowMo.ts` are his, unchanged.
+`src/systems/NearMiss.ts` and `src/systems/SlowMo.ts` are his, unchanged, and
+so is the art for the stoat, fox, snake, hawk and wolf.
 
 ## Roadmap
 

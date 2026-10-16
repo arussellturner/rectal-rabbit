@@ -125,6 +125,7 @@ const screen6 = [
 export const VINE_TEMPLE: LevelDef = {
   name: 'VINE TEMPLE',
   theme: 'jungle',
+  special: 'hawk',
   leopardSpeed: 1.05,
   spawner: { earlyInterval: [5.5, 8], lateInterval: [3, 5], maxLate: 3 },
   world: buildWorld(joinScreens(ROWS, SCREEN, [

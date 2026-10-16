@@ -1,5 +1,6 @@
 import type { World } from '../../level/LevelMap';
 import type { SpawnerConfig } from '../../systems/LeopardSpawner';
+import type { SpecialId } from '../specials';
 import type { ThemeId } from '../themes';
 
 export interface LevelDef {
@@ -11,6 +12,10 @@ export interface LevelDef {
   leopardSpeed: number;
   /** Changes to when leopards show up (see systems/LeopardSpawner.ts). */
   spawner?: Partial<SpawnerConfig>;
+  /** This level's special predator, which comes at you from the front (see data/specials.ts). */
+  special: SpecialId;
+  /** Changes to when the special predators show up. */
+  specialSpawner?: Partial<SpawnerConfig>;
 }
 
 /** Every level is drawn in screens 32 tiles wide and 15 tall. */
