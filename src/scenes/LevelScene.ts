@@ -41,6 +41,11 @@ const CAMERA_LEAD = GAME_WIDTH * 0.4;
 const SAFE_TIME = 2;
 /** Gap between the overworld and the burrows, which live off to the right of it. */
 const BURROW_GAP = 4 * TILE;
+/** Screen shake when a poop hits a leopard (intensity is a fraction of the screen size). */
+const SHAKE = {
+  hit: { ms: 130, intensity: 0.005 },
+  scared: { ms: 220, intensity: 0.009 },
+};
 /** Poop pellets thrown out by a poop bomb. */
 const SHRAPNEL = 18;
 /**
@@ -492,11 +497,14 @@ export class LevelScene extends Phaser.Scene {
     const originX = pellet.getData('originX') as number;
     this.pellets.kill(pellet);
     const result = leopard.hit(originX, (pellet.body as Phaser.Physics.Arcade.Body).velocity.x);
+    // A little screen shake on every hit (bigger for the one that knocks it over).
     if (result === 'scared') {
       this.floatText(leopard.hitbox.x, leopard.body.top - 40, 'SCARED OFF!', '#fce0a8', 16);
+      this.cameras.main.shake(SHAKE.scared.ms, SHAKE.scared.intensity);
       input.rumble(120, 0.5, 0.4);
     } else if (result === 'stagger') {
       this.floatText(leopard.hitbox.x, leopard.body.top - 40, 'SPLAT!', '#ffffff', 16);
+      this.cameras.main.shake(SHAKE.hit.ms, SHAKE.hit.intensity);
       input.rumble(60, 0.3, 0.2);
     }
   }
