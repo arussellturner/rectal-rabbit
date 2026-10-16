@@ -13,12 +13,19 @@ import { BOMB_COST, MAX_BOMBS, PoopBomb } from '../entities/PoopBomb';
 import { PoopPellets } from '../entities/PoopPellets';
 import { Rabbit, type RabbitEvents } from '../entities/Rabbit';
 import { SnowLeopard } from '../entities/SnowLeopard';
-import { TUNING } from '../entities/tuning';
+import { CATCH_TUNING, TUNING } from '../entities/tuning';
 import { input } from '../input/InputManager';
 import type { LevelMap, Rect, Spot, World } from '../level/LevelMap';
 import { DEFAULT_SPAWNER, LeopardSpawner } from '../systems/LeopardSpawner';
+import { NearMiss } from '../systems/NearMiss';
+import { SlowMo } from '../systems/SlowMo';
 import { prompts } from './prompts';
 import { textStyle } from './textStyles';
+
+/** Undo slow motion on a time step (near-miss cooldowns count real seconds). */
+function realDtOf(dt: number, scale: number): number {
+  return scale > 0 ? dt / scale : dt;
+}
 
 /** Events the HUD listens for. */
 export const LEVEL_EVENTS = {
@@ -36,6 +43,31 @@ const SAFE_TIME = 2;
 const BURROW_GAP = 4 * TILE;
 /** Poop pellets thrown out by a poop bomb. */
 const SHRAPNEL = 18;
+/**
+ * Under the title screen: zoomed in on the rabbit at the start. Pressing
+ * start zooms out to normal and play begins. (Marshall's idea, from
+ * turnerm5/rectal-rabbit.)
+ */
+const INTRO = {
+  /** Whole numbers only (pixel art). */
+  zoom: 2,
+  zoomOutMs: 1500,
+};
+
+/** A box in world pixels. */
+interface Box {
+  left: number;
+  right: number;
+  top: number;
+  bottom: number;
+}
+
+/** How far apart two boxes are (0 if they touch or overlap). */
+function boxGap(a: Box, b: Box): number {
+  const dx = Math.max(0, a.left - b.right, b.left - a.right);
+  const dy = Math.max(0, a.top - b.bottom, b.top - a.bottom);
+  return Math.hypot(dx, dy);
+}
 
 type Mode = 'play' | 'won' | 'over';
 /** Where the rabbit is: up top, or down in burrow number N. */
@@ -86,6 +118,12 @@ export class LevelScene extends Phaser.Scene {
   private weather!: Phaser.GameObjects.Particles.ParticleEmitter;
   private hint!: Phaser.GameObjects.Text;
   private lastProgress = 0;
+  /** Sitting under the title screen, zoomed in, waiting for start. */
+  private intro = false;
+  private slowMo = new SlowMo();
+  /** The jaws are closing (slow motion) on this leopard's catch. */
+  private catching: { by: SnowLeopard; left: number } | null = null;
+  private nearMisses = new Map<SnowLeopard, NearMiss>();
 
   constructor() {
     super('Level');
@@ -104,8 +142,10 @@ export class LevelScene extends Phaser.Scene {
     return this.location !== 'overworld';
   }
 
-  init(data: { index?: number }): void {
+  /** `intro`: open zoomed in, under the title screen. */
+  init(data: { index?: number; intro?: boolean }): void {
     this.levelIndex = Phaser.Math.Clamp(data?.index ?? 0, 0, LEVELS.length - 1);
+    this.intro = data?.intro ?? false;
     this.def = LEVELS[this.levelIndex];
     this.world = this.def.world;
     this.level = this.world.overworld;
@@ -126,6 +166,9 @@ export class LevelScene extends Phaser.Scene {
     this.grass = [];
     this.carrotPickups = [];
     this.lastProgress = 0;
+    this.slowMo = new SlowMo();
+    this.catching = null;
+    this.nearMisses = new Map();
     this.respawnSpot = level.spawn;
     // `?at=COLUMN` (testing): drop in from the sky partway through the level.
     if (START_COLUMN !== null) this.respawnSpot = { x: (START_COLUMN + 0.5) * TILE, y: 3 * TILE };
@@ -220,11 +263,63 @@ export class LevelScene extends Phaser.Scene {
     cam.setScroll(Phaser.Math.Clamp(this.respawnSpot.x - CAMERA_LEAD, 0, level.width - GAME_WIDTH), 0);
     cam.roundPixels = true;
 
-    this.scene.launch('Hud');
     this.events.once(Phaser.Scenes.Events.SHUTDOWN, () => this.scene.stop('Hud'));
+    // Scene time, tweens and physics keep their time scale across a restart.
+    this.applyTimeScale(1);
+    cam.setZoom(1);
 
-    this.showIntro();
+    if (this.intro) {
+      cam.setZoom(INTRO.zoom);
+      cam.centerOn(this.rabbit.hitbox.x, this.rabbit.hitbox.y - 20);
+      cam.fadeIn(900);
+      this.rabbit.controlsLocked = true;
+      if (!this.scene.isActive('Title')) this.scene.launch('Title');
+    } else {
+      cam.fadeIn(350);
+      this.scene.launch('Hud');
+      this.showIntro();
+    }
     if (TUNE) void import('../debug/tuningPanel').then((m) => m.openTuningPanel());
+  }
+
+  /**
+   * Start playing (from the title): the camera zooms out to normal, and once
+   * it has, the controls and the HUD are handed over. `onDone` runs then.
+   */
+  beginPlay(onDone?: () => void): void {
+    if (!this.intro) return;
+    const cam = this.cameras.main;
+    const r = this.rabbit;
+    const from = { x: cam.midPoint.x, y: cam.midPoint.y };
+    const toScroll = Phaser.Math.Clamp(r.hitbox.x - CAMERA_LEAD, 0, this.level.width - GAME_WIDTH);
+    const to = { x: toScroll + GAME_WIDTH / 2, y: this.level.height / 2 };
+    const p = { t: 0 };
+    this.tweens.add({
+      targets: p,
+      t: 1,
+      duration: INTRO.zoomOutMs,
+      ease: 'Sine.easeInOut',
+      onUpdate: () => {
+        cam.setZoom(INTRO.zoom + (1 - INTRO.zoom) * p.t);
+        cam.centerOn(from.x + (to.x - from.x) * p.t, from.y + (to.y - from.y) * p.t);
+      },
+      onComplete: () => {
+        cam.setZoom(1);
+        cam.setScroll(toScroll, 0);
+        this.intro = false;
+        r.controlsLocked = false;
+        this.scene.launch('Hud');
+        onDone?.();
+      },
+    });
+  }
+
+  private applyTimeScale(scale: number): void {
+    this.time.timeScale = scale;
+    this.tweens.timeScale = scale;
+    this.anims.globalTimeScale = scale;
+    // Arcade physics' timeScale is the other way round: 2 = half speed.
+    this.physics.world.timeScale = 1 / scale;
   }
 
   /** "LEVEL 2 / WHISPERING WOODS" across the screen for a moment. */
@@ -240,15 +335,23 @@ export class LevelScene extends Phaser.Scene {
   }
 
   update(_time: number, deltaMs: number): void {
-    if (this.mode === 'play' && !this.busy && input.justPressed('pause')) {
+    if (this.mode === 'play' && !this.busy && !this.intro && !this.catching && input.justPressed('pause')) {
       this.scene.launch('Pause');
       this.scene.pause();
       return;
     }
 
     // Cap dt so a hiccup (or a backgrounded tab) can't launch the rabbit.
-    const dt = Math.min(deltaMs / 1000, 1 / 20);
+    const realDt = Math.min(deltaMs / 1000, 1 / 20);
+    // Slow motion (a catch, a near miss) slows everything down for a moment.
+    const timeScale = this.slowMo.update(realDt);
+    this.applyTimeScale(timeScale);
+    const dt = realDt * timeScale;
     this.physics.world.gravity.y = TUNING.gravity;
+    if (this.catching) {
+      this.catching.left -= realDt;
+      if (this.catching.left <= 0) this.finishCatch(this.catching.by);
+    }
 
     for (const patch of this.grass) patch.update(dt);
     const underfoot = this.grassUnderfoot();
@@ -258,6 +361,8 @@ export class LevelScene extends Phaser.Scene {
     for (const b of this.bombs) b.update(dt);
     this.bombs = this.bombs.filter((b) => !b.done);
     this.collectCarrots();
+    // Under the title the camera holds still, zoomed in on the rabbit.
+    if (this.intro) return;
     this.updateCamera();
     this.updateLeopards(dt);
 
@@ -318,7 +423,7 @@ export class LevelScene extends Phaser.Scene {
     const cam = this.cameras.main;
     const target = { x: r.hitbox.x, feetY: r.body.bottom };
 
-    if (this.mode === 'play' && !this.busy && !this.underground && !NO_LEOPARDS) {
+    if (this.mode === 'play' && !this.busy && !this.underground && !this.catching && !NO_LEOPARDS) {
       const active = this.leopards.filter((l) => !l.brain.leaving).length;
       if (this.spawner.update(dt, r.hitbox.x, active)) this.spawnLeopard();
     }
@@ -329,9 +434,24 @@ export class LevelScene extends Phaser.Scene {
         leopard.gone = true;
         this.dirtBits.explode(16, leopard.hitbox.x, leopard.body.bottom);
       }
-      const canCatch = this.mode === 'play' && !this.busy && leopard.dangerous && !r.invulnerable;
-      if (canCatch && this.physics.overlap(r.hitbox, leopard.hitbox)) this.caught(leopard);
+      const canCatch = this.mode === 'play' && !this.busy && !this.catching && !r.invulnerable;
+      const rb = this.catchBox();
+      const lb = leopard.body;
+      const gap = boxGap(rb, lb);
+      if (canCatch && leopard.canBite && gap === 0) {
+        this.caught(leopard);
+        continue;
+      }
+      // Got right up to it and away again: CLOSE!
+      if (this.catching) continue;
+      let near = this.nearMisses.get(leopard);
+      if (!near) this.nearMisses.set(leopard, (near = new NearMiss(() => CATCH_TUNING)));
+      const attacking = canCatch && leopard.dangerous;
+      if (near.update(realDtOf(dt, this.slowMo.scale), { attacking, pouncing: leopard.airborne, gap, biting: attacking && gap === 0 })) {
+        this.nearMiss(leopard);
+      }
     }
+    for (const l of this.leopards) if (l.gone) this.nearMisses.delete(l);
     this.removeLeopards((l) => l.gone);
   }
 
@@ -371,7 +491,7 @@ export class LevelScene extends Phaser.Scene {
     this.poopBits.explode(12, pellet.x, pellet.y);
     const originX = pellet.getData('originX') as number;
     this.pellets.kill(pellet);
-    const result = leopard.hit(originX);
+    const result = leopard.hit(originX, (pellet.body as Phaser.Physics.Arcade.Body).velocity.x);
     if (result === 'scared') {
       this.floatText(leopard.hitbox.x, leopard.body.top - 40, 'SCARED OFF!', '#fce0a8', 16);
       input.rumble(120, 0.5, 0.4);
@@ -402,16 +522,59 @@ export class LevelScene extends Phaser.Scene {
     this.floatText(x, y - 60, 'KA-POOP!', '#fca044', 32);
   }
 
+  /**
+   * The part of the rabbit a leopard can catch. In the air it tucks its feet
+   * up, so this is a bit smaller: clearing a leopard's head by a hair counts.
+   */
+  private catchBox(): Box {
+    const b = this.rabbit.body;
+    if (this.rabbit.onGround) return { left: b.left, right: b.right, top: b.top, bottom: b.bottom };
+    const t = CATCH_TUNING;
+    return { left: b.left + t.airTuckSides, right: b.right - t.airTuckSides, top: b.top, bottom: b.bottom - b.height * t.airTuckBottom };
+  }
+
+  /** The jaws close: slow motion and a little zoom in, then `finishCatch` takes the heart. */
   private caught(by: SnowLeopard): void {
+    this.catching = { by, left: CATCH_TUNING.catchSlowMoTime };
+    // A catch is never also a near miss.
+    for (const n of this.nearMisses.values()) n.reset();
+    this.slowMo.start(CATCH_TUNING.catchSlowMo, CATCH_TUNING.catchSlowMoTime);
+    this.cameras.main.zoomTo(CATCH_TUNING.catchZoom, 120, 'Cubic.easeOut', true);
     by.caughtRabbit();
+    this.floatText(by.hitbox.x, by.body.top - 40, 'CHOMP!', '#f83800', 20);
+    input.rumble(120, 0.4, 0.2);
+    if (CATCH_TUNING.catchSlowMoTime <= 0) this.finishCatch(by);
+  }
+
+  /** After the slow-motion bite: back to normal speed, then the usual OUCH and the heart lost. */
+  private finishCatch(by: SnowLeopard): void {
+    this.catching = null;
+    this.slowMo.stop();
+    this.applyTimeScale(1);
+    this.cameras.main.zoomTo(1, 250, 'Cubic.easeInOut', true);
+    for (const n of this.nearMisses.values()) n.reset();
     this.cameras.main.shake(200, 0.008);
     this.cameras.main.flash(200, 248, 56, 0);
     input.rumble(300, 1, 0.8);
     this.floatText(this.rabbit.hitbox.x, this.rabbit.body.top - 30, 'OUCH!', '#f83800', 24);
-    if (this.loseLife()) return;
+    if (this.loseLife()) {
+      // The game-over screen goes on top; don't leave the camera zoomed.
+      this.cameras.main.setZoom(1);
+      return;
+    }
     this.rabbit.invulnerableTimer = SAFE_TIME;
     this.rabbit.knockback(this.rabbit.hitbox.x >= by.hitbox.x ? 1 : -1);
     this.spawner.delay(3);
+  }
+
+  /** The rabbit got right up to a leopard and away again: SNAP! CLOSE! */
+  private nearMiss(by: SnowLeopard): void {
+    const r = this.rabbit;
+    this.floatText(by.hitbox.x, by.body.top - 40, 'SNAP!', '#fcbcb0', 16);
+    this.floatText(r.hitbox.x, r.body.top - 40, 'CLOSE!', '#fce048', 24);
+    this.cameras.main.flash(90, 255, 255, 255);
+    this.slowMo.start(CATCH_TUNING.nearMissSlowMo, CATCH_TUNING.nearMissSlowMoTime);
+    input.rumble(120, 0.7, 0.4);
   }
 
   /** Is this body touching water / quicksand / lava? */

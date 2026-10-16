@@ -92,6 +92,13 @@ lava (`~`) cost a heart if you fall in, and snow leopards that fall in are gone.
 - **Dirt piles:** stand on one and press down (or Eat) to dig into a secret
   burrow. The leopards lose your trail. Grab the carrots (+1 poop each), then
   walk out the **EXIT** tunnel to pop up a little way past the dirt pile.
+- The title screen sits over the level itself, zoomed in on the rabbit.
+  Press start and the camera zooms out into the game.
+- When a leopard **catches** you, everything goes into slow motion for a
+  moment ("CHOMP!") before you lose the heart. Get right up to a leopard's
+  nose and away again and you get a "CLOSE!". It's a little forgiving: in the
+  air the rabbit tucks its feet up, and a leopard that's just landed can't
+  catch you straight away. Poop hits shove leopards back.
 - You have **3 hearts**. Getting caught or falling into a pit costs one.
   After a pit you restart at the last **checkpoint flag** (or the last place
   you popped out of a burrow).
@@ -261,6 +268,13 @@ Logic that doesn't need Phaser (`RabbitMotor`, `ChaserBrain`, `LevelMap`,
 `systems/`, `ActionState`, `gamepadMath`) is kept separate so it can be unit
 tested. Adding a new chaser is mostly copying `SNOW_LEOPARD` in
 `src/data/chasers.ts` and changing the numbers.
+
+## Thanks
+
+The title zoom-out, the slow-motion catch, near misses, the fairer catch
+boxes, poop knockback and texture warm-up come from Marshall's version of the
+game ([turnerm5/rectal-rabbit](https://github.com/turnerm5/rectal-rabbit)).
+`src/systems/NearMiss.ts` and `src/systems/SlowMo.ts` are his, unchanged.
 
 ## Roadmap
 

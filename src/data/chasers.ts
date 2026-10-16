@@ -36,6 +36,8 @@ export interface ChaserConfig {
   rollSpeed: number;
   /** After catching the rabbit, it sits for this long (seconds). */
   pauseAfterCatch: number;
+  /** How hard a poop shoves it back (px/s). Heavier animals would get less. */
+  knockback: number;
 }
 
 export const SNOW_LEOPARD: ChaserConfig = {
@@ -56,4 +58,5 @@ export const SNOW_LEOPARD: ChaserConfig = {
   fallTime: 0.9,
   rollSpeed: 480,
   pauseAfterCatch: 1.2,
+  knockback: 420,
 };

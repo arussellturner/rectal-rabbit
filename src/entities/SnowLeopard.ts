@@ -5,7 +5,7 @@ import type { ChaserConfig } from '../data/chasers';
 import type { LevelMap } from '../level/LevelMap';
 import { textStyle } from '../scenes/textStyles';
 import { approach } from './RabbitMotor';
-import { TUNING } from './tuning';
+import { CATCH_TUNING, TUNING } from './tuning';
 
 /**
  * A snow leopard charging in from behind: an Arcade Physics hitbox driven by
@@ -29,6 +29,8 @@ export class SnowLeopard {
   private shownHealth = 1;
   private onGround = false;
   private time = 0;
+  /** Seconds since it last landed (from a jump or a fall). */
+  private landedAgo = 99;
 
   constructor(
     private readonly scene: Phaser.Scene,
@@ -53,7 +55,9 @@ export class SnowLeopard {
   update(dt: number, rabbit: { x: number; feetY: number }, level: LevelMap, cam: Phaser.Cameras.Scene2D.Camera): void {
     this.time += dt;
     const body = this.body;
+    const wasOnGround = this.onGround;
     this.onGround = body.blocked.down || body.touching.down;
+    this.landedAgo = this.onGround && !wasOnGround ? 0 : this.landedAgo + dt;
     const facing = this.brain.facing;
     const camLeft = cam.scrollX;
 
@@ -104,12 +108,26 @@ export class SnowLeopard {
       .setY(Phaser.Math.Clamp(body.center.y, 60, cam.height - 60));
   }
 
-  /** Hit by a poop pellet fired from `fromX`. */
-  hit(fromX: number): 'stagger' | 'scared' | null {
+  /** Can it catch the rabbit right now? Not for a moment after landing, so landing on you isn't an instant catch. */
+  get canBite(): boolean {
+    return this.dangerous && this.landedAgo >= CATCH_TUNING.landingRecover;
+  }
+
+  /** In the air (jumping over something, or leaping at the rabbit). */
+  get airborne(): boolean {
+    return !this.onGround;
+  }
+
+  /**
+   * Hit by a poop pellet fired from `fromX`, flying at `pelletVx`: shoved
+   * back the way the poop was going.
+   */
+  hit(fromX: number, pelletVx = 0): 'stagger' | 'scared' | null {
     const result = this.brain.hit(fromX, this.hitbox.x);
     if (result) {
-      this.body.setVelocityX(0);
-      if (result === 'scared') this.body.setVelocityY(-320);
+      const dir = pelletVx !== 0 ? Math.sign(pelletVx) : this.hitbox.x >= fromX ? 1 : -1;
+      this.body.setVelocityX(dir * this.cfg.knockback);
+      this.body.setVelocityY(result === 'scared' ? -320 : this.onGround ? -160 : this.body.velocity.y);
       this.flash();
     }
     return result;

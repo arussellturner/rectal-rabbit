@@ -2,6 +2,7 @@ import Phaser from 'phaser';
 import { makeLevelTextures } from '../art/pixelTextures';
 import { makeThemeTextures } from '../art/themeTextures';
 import { THEMES } from '../data/themes';
+import { progress } from '../systems/save';
 import { SKIP_TITLE, START_LEVEL } from '../config';
 import { SHEETS } from '../data/spriteSheets';
 import { PIXEL_FONT } from './textStyles';
@@ -40,7 +41,8 @@ export class BootScene extends Phaser.Scene {
     const start = () =>
       SKIP_TITLE || START_LEVEL !== null
         ? this.scene.start('Level', { index: (START_LEVEL ?? 1) - 1 })
-        : this.scene.start('Title');
+        : // The title sits over the level itself, zoomed in on the newest level you've unlocked.
+          this.scene.start('Level', { index: progress.unlockedCount - 1, intro: true });
     // Fonts load lazily; ask for it now, but don't wait forever if offline.
     Promise.race([document.fonts.load(`16px ${PIXEL_FONT}`), new Promise((r) => setTimeout(r, 1500))]).then(start, start);
   }

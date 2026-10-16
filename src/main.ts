@@ -28,7 +28,8 @@ const game = new Phaser.Game({
   },
   // Keyboard and gamepad are read by our own InputManager instead.
   input: { keyboard: false, gamepad: false },
-  scene: [BootScene, TitleScene, LevelScene, HudScene, PauseScene, EndScene, ControllerSetupScene],
+  // Order matters: later scenes draw on top (the title sits over the level).
+  scene: [BootScene, LevelScene, TitleScene, HudScene, PauseScene, EndScene, ControllerSetupScene],
 });
 
 // Read input once per frame, before any scene updates.

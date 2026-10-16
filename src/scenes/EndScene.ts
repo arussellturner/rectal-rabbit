@@ -74,7 +74,7 @@ export class EndScene extends Phaser.Scene {
     if (!this.ready || !go) return;
 
     this.scene.stop('Level');
-    if (this.finishedGame) this.scene.start('Title');
+    if (this.finishedGame) this.scene.start('Level', { index: this.index, intro: true });
     else this.scene.start('Level', { index: this.data_.won ? this.index + 1 : this.index });
   }
 }

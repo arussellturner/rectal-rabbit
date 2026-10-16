@@ -96,3 +96,45 @@ export const DEFAULT_POOP_TUNING: Readonly<PoopTuning> = {
 };
 
 export const POOP_TUNING: PoopTuning = { ...DEFAULT_POOP_TUNING };
+
+/**
+ * Getting caught and near misses: slow motion and a camera punch-in, plus
+ * some fairness. (Ideas and numbers from Marshall's turnerm5/rectal-rabbit.)
+ */
+export interface CatchTuning {
+  /** Game speed while the jaws close on a catch (1 = normal, 0.25 = quarter speed). */
+  catchSlowMo: number;
+  /** Real seconds of that slow motion before the heart is lost. */
+  catchSlowMoTime: number;
+  /** Camera zoom on a catch (1 = none). */
+  catchZoom: number;
+  /** How close (px) the rabbit has to get to a leopard and still get away for a "CLOSE!". */
+  nearMissDistance: number;
+  /** Minimum seconds between near misses from one leopard. */
+  nearMissCooldown: number;
+  /** Game speed for the blink of slow motion on a near miss. */
+  nearMissSlowMo: number;
+  /** Real seconds of that slow motion. */
+  nearMissSlowMoTime: number;
+  /** A leopard that's just landed from a jump can't catch you for this long (s): landing on you isn't an instant catch. */
+  landingRecover: number;
+  /** In the air the rabbit tucks its feet up: this fraction comes off the bottom of the box leopards can catch. */
+  airTuckBottom: number;
+  /** …and this many px off each side. */
+  airTuckSides: number;
+}
+
+export const DEFAULT_CATCH_TUNING: Readonly<CatchTuning> = {
+  catchSlowMo: 0.25,
+  catchSlowMoTime: 0.4,
+  catchZoom: 1.25,
+  nearMissDistance: 16,
+  nearMissCooldown: 1.5,
+  nearMissSlowMo: 0.5,
+  nearMissSlowMoTime: 0.12,
+  landingRecover: 0.15,
+  airTuckBottom: 0.3,
+  airTuckSides: 4,
+};
+
+export const CATCH_TUNING: CatchTuning = { ...DEFAULT_CATCH_TUNING };
