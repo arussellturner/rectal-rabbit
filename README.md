@@ -78,7 +78,8 @@ lava (`~`) cost a heart if you fall in, and snow leopards that fall in are gone.
   pits, and up onto ledges after you.
 - Poop comes out the back, which is right where the leopards are. Hit one
   **once** and it stumbles. Hit it **twice** and it falls over, sees stars,
-  and rolls away.
+  and rolls away. Once a leopard's been hit, a health bar over its head shows
+  how many more hits it can take.
 - Each **grass** tuft has 3 bites. Hold Eat on it to chew; every bite is one
   poop. You carry up to 10 (the meter in the top-left). Grass grows back.
 - **Carrots in bubbles** float around the level: jump into one to pop it for
@@ -90,7 +91,7 @@ lava (`~`) cost a heart if you fall in, and snow leopards that fall in are gone.
   time; they fizzle out after a while.
 - **Dirt piles:** stand on one and press down (or Eat) to dig into a secret
   burrow. The leopards lose your trail. Grab the carrots (+1 poop each), then
-  walk out the **EXIT** tunnel to pop up further along the level.
+  walk out the **EXIT** tunnel to pop up a little way past the dirt pile.
 - You have **3 hearts**. Getting caught or falling into a pit costs one.
   After a pit you restart at the last **checkpoint flag** (or the last place
   you popped out of a burrow).

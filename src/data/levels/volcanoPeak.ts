@@ -1,5 +1,6 @@
 import { buildWorld, joinScreens } from '../../level/LevelMap';
 import { CAVERN, ZIGZAG } from './burrows';
+import { bridges, steps } from './extraScreens';
 import { GROUND, ROWS, SCREEN, type LevelDef } from './types';
 
 /**
@@ -40,7 +41,7 @@ const screen2 = [
   '',
   '...........X',
   '.......X...X...X',
-  '.......X...X...X......D',
+  '.......X...X...X......D.......O',
   '####~~~~~~~~~~~~~~##############',
   '####~~~~~~~~~~~~~~##############',
 ];
@@ -59,7 +60,7 @@ const screen3 = [
   '...........g',
   '........#############',
   '........#############',
-  '..F...X.#############.......O',
+  '..F...X.#############',
   GROUND,
   GROUND,
 ];
@@ -97,7 +98,7 @@ const screen5 = [
   '...............SSS',
   '...........XX',
   '.........XXXX',
-  '..F.....XXXXX..............O',
+  '..F.O...XXXXX',
   '##############~~~~~#############',
   '##############~~~~~#############',
 ];
@@ -126,5 +127,14 @@ export const VOLCANO_PEAK: LevelDef = {
   theme: 'volcano',
   leopardSpeed: 1.1,
   spawner: { earlyInterval: [4.5, 7], lateInterval: [2.5, 4], maxEarly: 2, maxLate: 3 },
-  world: buildWorld(joinScreens(ROWS, SCREEN, [screen1, screen2, screen3, screen4, screen5, screen6]), [ZIGZAG, CAVERN]),
+  world: buildWorld(joinScreens(ROWS, SCREEN, [
+    screen1,
+    screen2,
+    screen3,
+    steps({ pit: '~' }),
+    screen4,
+    screen5,
+    bridges({ pit: '~', flag: true }),
+    screen6,
+  ]), [ZIGZAG, CAVERN]),
 };

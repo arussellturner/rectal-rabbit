@@ -23,6 +23,10 @@ export class SnowLeopard {
 
   private readonly warning: Phaser.GameObjects.Text;
   private readonly stars: Phaser.GameObjects.Image[];
+  /** Health bar over its head, shown from the first poop hit on. */
+  private readonly healthBar: Phaser.GameObjects.Graphics;
+  /** The bar drains smoothly toward the real health. */
+  private shownHealth = 1;
   private onGround = false;
   private time = 0;
 
@@ -39,6 +43,7 @@ export class SnowLeopard {
     this.art.play(`${cfg.sheet}-run`);
     this.warning = scene.add.text(28, 0, '!', textStyle(40, '#f83800')).setOrigin(0.5).setScrollFactor(0).setDepth(30);
     this.stars = [0, 1, 2].map(() => scene.add.image(x, 0, 'star').setDepth(20).setVisible(false));
+    this.healthBar = scene.add.graphics().setDepth(20);
   }
 
   get body(): Phaser.Physics.Arcade.Body {
@@ -86,6 +91,7 @@ export class SnowLeopard {
     }
 
     this.updateArt(intent.anim, intent.facing);
+    this.drawHealth(dt);
 
     const offLeft = body.right < camLeft - 400 && this.brain.leaving;
     const offRight = body.left > camLeft + cam.width + 400;
@@ -132,6 +138,45 @@ export class SnowLeopard {
     this.art.destroy();
     this.warning.destroy();
     for (const s of this.stars) s.destroy();
+    this.healthBar.destroy();
+  }
+
+  /**
+   * A chunky 8-bit health bar over its head: one block per poop hit it can
+   * take, green when healthy, going yellow then red. Hidden until it's hit,
+   * and once it's rolling away.
+   */
+  private drawHealth(dt: number): void {
+    const g = this.healthBar;
+    g.clear();
+    const brain = this.brain;
+    if (brain.hits === 0 || brain.state === 'roll') return;
+
+    const target = brain.health;
+    this.shownHealth = Math.max(target, this.shownHealth - dt * 2.5);
+    const blocks = this.cfg.hitsToScare;
+    const blockW = 8 * PIXEL;
+    const gap = PIXEL;
+    const w = blocks * blockW + (blocks - 1) * gap;
+    const h = 3 * PIXEL;
+    const x = Math.round(this.hitbox.x - w / 2);
+    const y = Math.round(this.body.top - 44);
+
+    // Black border, dark empty blocks, then the colored fill.
+    g.fillStyle(0x000000, 1).fillRect(x - PIXEL, y - PIXEL, w + 2 * PIXEL, h + 2 * PIXEL);
+    const color = target > 0.6 ? 0x58d854 : target > 0.3 ? 0xfce048 : 0xf83800;
+    for (let i = 0; i < blocks; i++) {
+      const bx = x + i * (blockW + gap);
+      g.fillStyle(0x3c3c3c, 1).fillRect(bx, y, blockW, h);
+      // How much of this block is still full.
+      const fill = Phaser.Math.Clamp(this.shownHealth * blocks - i, 0, 1);
+      if (fill <= 0) continue;
+      // Draining part flashes white, the rest is the health color.
+      const real = Phaser.Math.Clamp(target * blocks - i, 0, 1);
+      if (fill > real) g.fillStyle(0xfcfcfc, 1).fillRect(bx, y, Math.round(blockW * fill), h);
+      if (real > 0) g.fillStyle(color, 1).fillRect(bx, y, Math.round(blockW * real), h);
+      g.fillStyle(0xffffff, 0.35).fillRect(bx, y, Math.round(blockW * Math.max(fill, real)), PIXEL);
+    }
   }
 
   private updateArt(anim: string, facing: 1 | -1): void {

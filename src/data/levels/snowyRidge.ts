@@ -1,5 +1,6 @@
 import { buildWorld, joinScreens } from '../../level/LevelMap';
 import { CELLAR, ROOT_MAZE } from './burrows';
+import { bridges, pillars } from './extraScreens';
 import { GROUND, ROWS, SCREEN, type LevelDef } from './types';
 
 /**
@@ -56,7 +57,7 @@ const screen2 = [
   '........................g',
   '.......========.........XX',
   '........................XX',
-  '.....g............D.....XX',
+  '.....g............D.....XX...O',
   '########......##################',
   '########......##################',
 ];
@@ -75,7 +76,7 @@ const screen3 = [
   '',
   '',
   '......##########',
-  '......##########..g.........O',
+  '......##########..g',
   '######################...#######',
   '######################...#######',
 ];
@@ -112,7 +113,7 @@ const screen5 = [
   '.......g',
   '....SSSSSSSS..............g',
   '..........................######',
-  '......................##########',
+  '...................O..##########',
   '........D.........##############',
   GROUND,
   GROUND,
@@ -132,7 +133,7 @@ const screen6 = [
   '..F.g......SSSSS',
   '######',
   '######......................XX',
-  '######..................O...XX',
+  '######......................XX',
   '############...#################',
   '############...#################',
 ];
@@ -160,7 +161,17 @@ export const SNOWY_RIDGE: LevelDef = {
   name: 'SNOWY RIDGE',
   theme: 'snow',
   leopardSpeed: 1,
-  world: buildWorld(joinScreens(ROWS, SCREEN, [screen1, screen2, screen3, screen4, screen5, screen6, screen7]), [
+  world: buildWorld(joinScreens(ROWS, SCREEN, [
+    screen1,
+    screen2,
+    screen3,
+    screen4,
+    pillars(),
+    screen5,
+    screen6,
+    bridges({ flag: true }),
+    screen7,
+  ]), [
     CELLAR,
     ROOT_MAZE,
   ]),

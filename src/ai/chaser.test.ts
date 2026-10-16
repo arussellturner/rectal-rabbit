@@ -66,6 +66,15 @@ describe('ChaserBrain', () => {
     expect(brain.update(senses(), SNOW_LEOPARD.pauseAfterCatch).dangerous).toBe(true);
   });
 
+  it('loses health with each poop hit (for its health bar)', () => {
+    const brain = new ChaserBrain(SNOW_LEOPARD);
+    expect(brain.health).toBe(1);
+    brain.hit(-300, 0);
+    expect(brain.health).toBeCloseTo(1 - 1 / SNOW_LEOPARD.hitsToScare);
+    brain.scare(-300, 0);
+    expect(brain.health).toBe(0);
+  });
+
   it('is knocked straight over by a poop bomb, rolling away from the blast', () => {
     const brain = new ChaserBrain(SNOW_LEOPARD);
     expect(brain.scare(100, 0)).toBe(true);

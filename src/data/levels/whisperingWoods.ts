@@ -1,5 +1,6 @@
 import { buildWorld, joinScreens } from '../../level/LevelMap';
 import { CELLAR, ZIGZAG } from './burrows';
+import { roof, steps } from './extraScreens';
 import { GROUND, ROWS, SCREEN, type LevelDef } from './types';
 
 /**
@@ -41,7 +42,7 @@ const screen2 = [
   '',
   '........g',
   '.....##########',
-  '.....##########....D.......g',
+  '.....##########....D.......g..O',
   GROUND,
   GROUND,
 ];
@@ -60,7 +61,7 @@ const screen3 = [
   '',
   '',
   '',
-  '..F.g......S....S...........O',
+  '..F.g......S....S',
   '########~~~~~~~~~~~~############',
   '########~~~~~~~~~~~~############',
 ];
@@ -98,7 +99,7 @@ const screen5 = [
   '',
   '.........========...g',
   '..................######',
-  '..F..g............######...O',
+  '..F..gO...........######',
   '##########~~~~~~################',
   '##########~~~~~~################',
 ];
@@ -127,5 +128,14 @@ export const WHISPERING_WOODS: LevelDef = {
   theme: 'forest',
   leopardSpeed: 1,
   spawner: { earlyInterval: [6.5, 9], lateInterval: [3.5, 5.5] },
-  world: buildWorld(joinScreens(ROWS, SCREEN, [screen1, screen2, screen3, screen4, screen5, screen6]), [ZIGZAG, CELLAR]),
+  world: buildWorld(joinScreens(ROWS, SCREEN, [
+    screen1,
+    screen2,
+    screen3,
+    steps({ pit: '~' }),
+    screen4,
+    screen5,
+    roof({ flag: true }),
+    screen6,
+  ]), [ZIGZAG, CELLAR]),
 };

@@ -1,5 +1,6 @@
 import { buildWorld, joinScreens } from '../../level/LevelMap';
 import { CAVERN, ROOT_MAZE } from './burrows';
+import { bridges, pillars } from './extraScreens';
 import { GROUND, ROWS, SCREEN, type LevelDef } from './types';
 
 /**
@@ -40,7 +41,7 @@ const screen2 = [
   '........g',
   '......##########',
   '......##########',
-  '...X..##########......D',
+  '...X..##########......D.......O',
   '##########################~~~###',
   '##########################~~~###',
 ];
@@ -59,7 +60,7 @@ const screen3 = [
   '',
   '',
   '...........S...S',
-  '..F.g......S...S............O',
+  '..F.g......S...S',
   '########~~~~~~~~~~##############',
   '########~~~~~~~~~~##############',
 ];
@@ -97,7 +98,7 @@ const screen5 = [
   '..............XX',
   '........====......===',
   '',
-  '..F..........................O',
+  '..FO',
   '######~~~~~~~~~~~~~~############',
   '######~~~~~~~~~~~~~~############',
 ];
@@ -126,5 +127,14 @@ export const DUNE_SEA: LevelDef = {
   theme: 'desert',
   leopardSpeed: 1.03,
   spawner: { earlyInterval: [6, 8.5], lateInterval: [3.5, 5] },
-  world: buildWorld(joinScreens(ROWS, SCREEN, [screen1, screen2, screen3, screen4, screen5, screen6]), [CAVERN, ROOT_MAZE]),
+  world: buildWorld(joinScreens(ROWS, SCREEN, [
+    screen1,
+    screen2,
+    bridges({ pit: '~' }),
+    screen3,
+    screen4,
+    screen5,
+    pillars({ flag: true }),
+    screen6,
+  ]), [CAVERN, ROOT_MAZE]),
 };

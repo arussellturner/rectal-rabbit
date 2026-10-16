@@ -1,5 +1,6 @@
 import { buildWorld, joinScreens } from '../../level/LevelMap';
 import { CAVERN, CELLAR } from './burrows';
+import { pillars, steps } from './extraScreens';
 import { GROUND, ROWS, SCREEN, type LevelDef } from './types';
 
 /**
@@ -40,7 +41,7 @@ const screen2 = [
   '',
   '',
   '',
-  '....g.................D',
+  '....g.................D.......O',
   '########~~~~~###################',
   '########~~~~~###################',
 ];
@@ -59,7 +60,7 @@ const screen3 = [
   '',
   '..........X',
   '.........XX',
-  '..F.g...XXX.................O',
+  '..F.g...XXX',
   '######################~~~#######',
   '######################~~~#######',
 ];
@@ -97,7 +98,7 @@ const screen5 = [
   '..............X',
   '.........X....X',
   '.........X....X',
-  '..F..g...X....X...........O',
+  '..F.Og...X....X',
   GROUND,
   GROUND,
 ];
@@ -126,5 +127,14 @@ export const CRYSTAL_CAVERNS: LevelDef = {
   theme: 'cave',
   leopardSpeed: 1.07,
   spawner: { earlyInterval: [5, 7.5], lateInterval: [3, 4.5], maxLate: 3 },
-  world: buildWorld(joinScreens(ROWS, SCREEN, [screen1, screen2, screen3, screen4, screen5, screen6]), [CAVERN, CELLAR]),
+  world: buildWorld(joinScreens(ROWS, SCREEN, [
+    screen1,
+    screen2,
+    screen3,
+    pillars({ ceiling: true }),
+    screen4,
+    screen5,
+    steps({ pit: '~', ceiling: true, flag: true }),
+    screen6,
+  ]), [CAVERN, CELLAR]),
 };

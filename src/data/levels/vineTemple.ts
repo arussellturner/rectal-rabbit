@@ -1,5 +1,6 @@
 import { buildWorld, joinScreens } from '../../level/LevelMap';
 import { ROOT_MAZE, ZIGZAG } from './burrows';
+import { bridges, roof } from './extraScreens';
 import { GROUND, ROWS, SCREEN, type LevelDef } from './types';
 
 /**
@@ -40,7 +41,7 @@ const screen2 = [
   '...........======',
   '...======',
   '',
-  '......................D.....g',
+  '......................D.....g..O',
   '####~~~~~~~~~~~~################',
   '####~~~~~~~~~~~~################',
 ];
@@ -59,7 +60,7 @@ const screen3 = [
   '...........XXXX',
   '..........XXXXXX',
   '.........XXXXXXXX',
-  '..F.....XXXXXXXXXX..........O',
+  '..F.....XXXXXXXXXX',
   GROUND,
   GROUND,
 ];
@@ -97,7 +98,7 @@ const screen5 = [
   '............XX',
   '............XX',
   '............XX',
-  '..F..g....X.XX............O',
+  '..F..g.O..X.XX',
   GROUND,
   GROUND,
 ];
@@ -126,5 +127,14 @@ export const VINE_TEMPLE: LevelDef = {
   theme: 'jungle',
   leopardSpeed: 1.05,
   spawner: { earlyInterval: [5.5, 8], lateInterval: [3, 5], maxLate: 3 },
-  world: buildWorld(joinScreens(ROWS, SCREEN, [screen1, screen2, screen3, screen4, screen5, screen6]), [ROOT_MAZE, ZIGZAG]),
+  world: buildWorld(joinScreens(ROWS, SCREEN, [
+    screen1,
+    screen2,
+    roof(),
+    screen3,
+    screen4,
+    screen5,
+    bridges({ pit: '~', flag: true }),
+    screen6,
+  ]), [ROOT_MAZE, ZIGZAG]),
 };

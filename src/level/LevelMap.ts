@@ -131,6 +131,9 @@ export function parseLevel(grid: readonly string[], kind: MapKind = 'overworld')
     }
   }
   const exitTunnels = mergeRuns(rows, cols, (c, r) => tileAt(c, r) === 'E', true);
+  // Dirt piles and exit holes pair up left to right, whatever row they're on.
+  dirtPiles.sort((a, b) => a.x - b.x);
+  exitHoles.sort((a, b) => a.x - b.x);
 
   if (!spawn) throw new Error(`The ${kind} needs an 'R' for where the rabbit starts.`);
   if (kind === 'overworld' && !home) throw new Error("The level needs an 'H' for the rabbit's home.");

@@ -122,6 +122,11 @@ export class ChaserBrain {
     return true;
   }
 
+  /** How much fight it has left: 1 = never hit, 0 = knocked over. */
+  get health(): number {
+    return Math.max(0, 1 - this.hits / this.cfg.hitsToScare);
+  }
+
   get leaving(): boolean {
     return this.state === 'knockdown' || this.state === 'roll';
   }

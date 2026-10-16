@@ -167,6 +167,18 @@ describe.each(LEVELS.map((l) => [l.name, l] as const))('level: %s', (_name, def)
     level.dirtPiles.forEach((p, i) => expect(canReach(reach, spotOf(p, TILE)), `dirt pile ${i + 1} reachable`).toBe(true));
   });
 
+  it('pops you out of each burrow a little way past its dirt pile', () => {
+    level.dirtPiles.forEach((pile, i) => {
+      const tiles = (level.exitHoles[i].x - pile.x) / TILE;
+      expect(tiles, `burrow ${i + 1}`).toBeGreaterThanOrEqual(4);
+      expect(tiles, `burrow ${i + 1}`).toBeLessThanOrEqual(16);
+    });
+  });
+
+  it('is long enough: at least 8 screens', () => {
+    expect(level.cols).toBeGreaterThanOrEqual(8 * 32);
+  });
+
   it('can be finished without using the burrows too', () => {
     const reach = reachableSpots(level, spotOf(level.spawn, TILE));
     expect(canReach(reach, spotOf(level.home!, TILE))).toBe(true);
