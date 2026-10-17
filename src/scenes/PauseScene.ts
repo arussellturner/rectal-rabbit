@@ -36,7 +36,7 @@ export class PauseScene extends Phaser.Scene {
   update(): void {
     const k = prompts();
     const touch = input.lastDevice === 'touch';
-    this.hint.setText(touch ? 'TAP II OR JUMP TO KEEP HOPPING' : `${k.pause} OR ${k.jump}: KEEP HOPPING     ${k.settings}: CONTROLLER SETUP`);
+    this.hint.setText(touch ? 'TAP PAUSE OR JUMP TO KEEP HOPPING' : `${k.pause} OR ${k.jump}: KEEP HOPPING     ${k.settings}: CONTROLLER SETUP`);
     this.drawLegend();
     if (input.justPressed('settings')) {
       this.scene.launch('ControllerSetup', { returnTo: 'Pause', how: 'wake' });

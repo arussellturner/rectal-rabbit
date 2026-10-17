@@ -130,7 +130,7 @@ always shows the main ones.
 
 Open the game on your phone and on-screen controls appear: a d-pad on the
 left, **JUMP**, **EAT/DIG**, **POOP**, **VOMIT**, **BOMB** and **BOOM** on the right (each with a little picture of what it does, laid out to fit any phone), and pause
-(**II**) in the corner. Turn the phone sideways for the biggest view; held
+(the pause button) in the corner. Turn the phone sideways for the biggest view; held
 upright, the game sits at the top with the buttons underneath. Tap the screen
 to start, and tap the arrows by the level name to pick a level. Add the page
 to your home screen to play full screen. (`?touch` shows the touch controls

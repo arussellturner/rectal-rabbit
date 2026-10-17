@@ -61,7 +61,7 @@ export function prompts(): Prompts {
       vomit: 'VOMIT',
       bomb: 'BOMB',
       splode: 'BOOM',
-      pause: 'II',
+      pause: 'PAUSE',
       settings: '-',
     };
   }
