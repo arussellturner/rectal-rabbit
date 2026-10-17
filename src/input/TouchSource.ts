@@ -31,6 +31,8 @@ const ICONS: Record<string, string[]> = {
   poop: ['....KK....', '...KDDK...', '...KDLK...', '..KDDDDK..', '..KDLLDK..', '.KDDDDDDK.', '.KDLLLDDK.', 'KDDDDDDDDK', '.KKKKKKKK.'],
   vomit: ['KK........', 'KMK..V.v..', 'KMMVVVV.V.', 'KMMVvVVVVV', 'KMMVVVVvV.', 'KMK.Vv.V..', 'KK........'],
   bomb: ['.....Y.Y..', '......Y...', '.....G....', '....G.....', '...KDDK...', '..KDLLDK..', '.KDDDDDDK.', 'KDLLDDLLDK', 'KDDDDDDDDK', '.KKKKKKKK.'],
+  // Two chunky white bars with a dark outline.
+  pause: ['KKKK.KKKK', ...Array<string>(7).fill('KWWK.KWWK'), 'KKKK.KKKK'],
   splode: ['D...D...D', '.D..O..D.', '..OOOOO..', '..O.D.O..', 'DOODDDOOD', '..O.D.O..', '..OOOOO..', '.D..O..D.', 'D...D...D'],
 };
 
@@ -54,7 +56,7 @@ const BUTTONS: { action: Action; label: string; className: string; icon?: string
   { action: 'vomit', label: 'VOMIT', className: 'rr-vomit', icon: 'vomit' },
   { action: 'dropBomb', label: 'BOMB', className: 'rr-bomb', icon: 'bomb' },
   { action: 'splode', label: 'BOOM', className: 'rr-splode', icon: 'splode' },
-  { action: 'pause', label: 'II', className: 'rr-pause' },
+  { action: 'pause', label: '', className: 'rr-pause', icon: 'pause' },
 ];
 
 /*
@@ -101,6 +103,7 @@ const CSS = `
   right: calc(var(--right) + var(--b) * 1.3 + var(--g)); bottom: calc(var(--bottom) + var(--b) * 2.15 + var(--g) * 3); }
 .rr-pause  { --c: rgba(255,255,255,0.85); --bg: rgba(0,0,0,0.45); width: 48px; height: 48px; border-radius: 12px;
   right: var(--right); top: calc(10px + env(safe-area-inset-top, 0px)); font-size: 14px; }
+.rr-pause .icon { width: 54%; }
 .rr-pad { position: absolute; left: var(--left); bottom: var(--bottom); width: 168px; height: 168px;
   pointer-events: auto; touch-action: none; opacity: 0.85;
   transform: scale(var(--pad-scale, 1)); transform-origin: bottom left; }
@@ -182,7 +185,7 @@ export class TouchSource {
     for (const b of BUTTONS) {
       const el = document.createElement('div');
       el.className = `rr-btn ${b.className}`;
-      el.innerHTML = b.icon ? `${iconSvg(ICONS[b.icon])}<span>${b.label}</span>` : b.label;
+      el.innerHTML = (b.icon ? iconSvg(ICONS[b.icon]) : '') + (b.label ? `<span>${b.label}</span>` : '');
       // Jump also works as "OK" in menus.
       const actions: Action[] = b.action === 'jump' ? ['jump', 'confirm'] : [b.action];
       this.hold(el, (down) => {
