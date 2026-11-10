@@ -251,6 +251,12 @@ buck teeth and tongue out) aren't in the drawing: they're drawn pixel by
 pixel in `tools/rabbit_extra_frames.py`, which adds them to the end of
 `rabbit.png` (`extract_sprites.py` runs it for you).
 
+The game's icon (browser tab favicon, iPhone/iPad "Add to Home Screen",
+Android home screen) is the sitting rabbit on a patch of snow, drawn as
+chunky pixels: `public/icon.svg` plus PNG/ICO copies, all made by
+`tools/make_icons.py` from the rabbit sprite. Run it again if the rabbit
+changes.
+
 Which frames make up which animation (run, jump, poop, getting hit, falling
 down, rolling away) is listed in `src/data/spriteSheets.ts`.
 
